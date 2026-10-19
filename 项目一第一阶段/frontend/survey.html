@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>填写问卷 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+  .topbar{background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10}
+  .logo{font-size:18px;font-weight:700;color:#4f46e5}
+  .btn-back{padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;color:#333;cursor:pointer;font-size:14px;text-decoration:none}
+  .btn-back:hover{background:#f9fafb}
+  .container{max-width:700px;margin:24px auto;padding:0 24px}
+  .page-title{font-size:24px;font-weight:700;margin-bottom:6px}
+  .page-desc{color:#666;margin-bottom:24px;font-size:15px;line-height:1.5}
+  .card{background:#fff;border-radius:12px;padding:32px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+  .q-number{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#4f46e5;color:#fff;border-radius:50%;font-size:13px;font-weight:700;margin-right:10px}
+  .q-title{font-size:17px;font-weight:600;color:#1a1a2e;margin-bottom:14px}
+  .q-required{color:#4f46e5;font-size:12px;margin-left:6px}
+  .options{display:flex;flex-direction:column;gap:10px}
+  .option{display:flex;align-items:center;padding:12px 16px;border:2px solid #f1f1f1;border-radius:10px;cursor:pointer;transition:all .2s;gap:12px}
+  .option:hover{border-color:#4f46e5;background:#f0f1ff}
+  .option input{appearance:none;width:18px;height:18px;border-radius:50%;border:2px solid #ccc;cursor:pointer;position:relative}
+  .option input:checked{border-color:#4f46e5;background:#4f46e5}
+  .option input:checked::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;background:#fff;border-radius:50%}
+  .option-multi input{appearance:none;width:18px;height:18px;border:2px solid #ccc;border-radius:4px;cursor:pointer;position:relative}
+  .option-multi input:checked{border-color:#4f46e5;background:#4f46e5}
+  .option-multi input:checked::after{content:'✓';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:12px;font-weight:700}
+  input[type=text],input[type=email],input[type=number],input[type=date],textarea,select{width:100%;padding:12px 14px;border:2px solid #f1f1f1;border-radius:8px;font-size:14px;outline:none;transition:border .2s}
+  input[type=text]:focus,input[type=email]:focus,input[type=number]:focus,input[type=date]:focus,textarea:focus,select:focus{border-color:#4f46e5}
+  textarea{resize:vertical;min-height:100px}
+  .rating{display:flex;gap:8px;align-items:center}
+  .rating label{cursor:pointer;font-size:26px;color:#ccc;transition:color .2s}
+  .rating label:hover,.rating label.selected{color:#f59e0b}
+  .rating input{display:none}
+  .file-wrap{border:2px dashed #ddd;border-radius:8px;padding:24px;text-align:center;color:#666;cursor:pointer;transition:border .2s}
+  .file-wrap:hover{border-color:#4f46e5}
+  .file-input{display:none}
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+  .btn-nav{padding:10px 26px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+  .btn-prev{background:#fff;border:1px solid #ddd;color:#333}
+  .btn-prev:hover{background:#f9fafb}
+  .btn-prev:disabled{opacity:.5;cursor:not-allowed}
+  .btn-next{background:#4f46e5;color:#fff}
+  .btn-next:hover{background:#4338ca}
+  .btn-next:disabled{opacity:.65;cursor:not-allowed}
+  .btn-submit{background:#1e7e34;color:#fff}
+  .btn-submit:hover{background:#157347}
+  .progress{height:6px;background:#eef;border-radius:3px;overflow:hidden;margin-bottom:16px}
+  .progress-bar{height:100%;background:#4f46e5;width:0%;transition:width .3s}
+  .err{color:#b3261e;font-size:12px;margin-top:6px;display:none}
+  .limit-hint{font-size:12px;color:#999;margin-top:6px}
+  .empty{text-align:center;padding:60px;color:#999}
+  .anonymous-note{color:#999;font-size:13px;margin-bottom:16px}
+  .email-box{background:#fff;border-radius:10px;padding:18px 22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .email-box label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+  .q-answered{color:#1e7e34}
+  .field-wrap{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">问卷系统</div>
+  <a class="btn-back" href="dashboard.html">返回</a>
+</div>
+<div class="container">
+  <div class="page-title" id="surveyTitle">问卷标题</div>
+  <div class="page-desc" id="surveyDesc"></div>
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+  <div id="msg" style="padding:10px;border-radius:6px;font-size:13px;display:none;margin-bottom:16px"></div>
+  <div class="anonymous-note" id="anonNote" style="display:none">您正在以匿名身份填写</div>
+  <div class="email-box" id="emailBox" style="display:none">
+    <label for="emailInput">您的邮箱</label>
+    <input type="email" id="emailInput" placeholder="用于接收问卷相关通知，方便时请填写">
+    <div class="err" id="emailErr"></div>
+  </div>
+  <div id="surveyContainer"></div>
+  <div class="nav">
+    <button class="btn-nav btn-prev" id="btnPrev" onclick="prevQ()">上一题</button>
+    <button class="btn-nav btn-next" id="btnNext" onclick="nextQ()">下一题</button>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+let token = localStorage.getItem('token');
+const urlParams = new URLSearchParams(location.search);
+let surveyId = urlParams.get('id') || urlParams.get('survey_id');
+const pathMatch = location.pathname.match(/\/survey\/([^/]+)\/?$/);
+const linkCode = pathMatch ? decodeURIComponent(pathMatch[1]) : urlParams.get('code');
+let isAnonymous = !token;
+let survey = null;
+let allQuestions = [];
+let answers = {};
+let responseId = null;
+let currentVisible = [];
+let currentIdx = 0;
+let isComposing = false;
+let skippedIds = new Set();
+const container = document.getElementById('surveyContainer');
+const msg = document.getElementById('msg');
+const anonNote = document.getElementById('anonNote');
+if (isAnonymous) anonNote.style.display = 'block';
+function showMsg(text, type) {
+  msg.textContent = text; msg.className = type === 'error' ? '' : 'success';
+  msg.style.background = type === 'error' ? '#fdecea' : '#e7f4ea';
+  msg.style.color = type === 'error' ? '#b3261e' : '#1e7e34';
+  msg.style.border = type === 'error' ? '1px solid #f5c6c6' : '1px solid #c3e6cb';
+  msg.style.display = 'block';
+}
+async function init() {
+  if (!surveyId && !linkCode) { document.getElementById('surveyContainer').innerHTML = '<div class="empty">问卷不存在</div>'; return; }
+  try {
+    const detailUrl = linkCode
+      ? `${API}/surveys/link/${encodeURIComponent(linkCode)}`
+      : `${API}/surveys/${surveyId}`;
+    const res = await fetch(detailUrl);
+    if (!res.ok) { document.getElementById('surveyContainer').innerHTML = '<div class="empty">问卷不存在或已关闭</div>'; return; }
+    const data = await res.json();
+    survey = data.data;
+    surveyId = survey.id || survey._id || surveyId;
+    if (!surveyId) { document.getElementById('surveyContainer').innerHTML = '<div class="empty">问卷不存在</div>'; return; }
+    document.getElementById('surveyTitle').textContent = survey.title;
+    document.getElementById('surveyDesc').textContent = survey.description || '本问卷仅供参考，请如实填写。';
+    const settings = survey.settings || {};
+    if (settings.show_progress === false) document.querySelector('.progress').style.display = 'none';
+    if (settings.collect_email) {
+      document.getElementById('emailBox').style.display = 'block';
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || 'null');
+        if (u && u.email) document.getElementById('emailInput').value = u.email;
+      } catch (e) {}
+    }
+    allQuestions = (survey.questions || []).map(q => ({ ...q }));
+    let usedToken = token;
+    async function tryStart(t) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (t) headers.Authorization = `Bearer ${t}`;
+      const rr = await fetch(`${API}/fill/surveys/${surveyId}/start`, { method: 'POST', headers });
+      if (rr.status === 401 && t) {
+        token = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        isAnonymous = true;
+        anonNote.style.display = 'block';
+        return tryStart(null);
+      }
+      const rd = await rr.json();
+      if (rr.ok) {
+        responseId = rd.data.response_id;
+        answers = {};
+        // 登录用户重复打开填写页时，后端会复用同一条草稿，需要把已保存答案恢复回来
+        try {
+          const progressHeaders = t ? { Authorization: `Bearer ${t}` } : {};
+          const progressRes = await fetch(`${API}/fill/responses/${responseId}`, { headers: progressHeaders });
+          if (progressRes.ok) {
+            const progressData = await progressRes.json();
+            const savedAnswers = progressData.data && progressData.data.answers;
+            if (savedAnswers && typeof savedAnswers === 'object') answers = savedAnswers;
+          }
+        } catch (e) {}
+        return true;
+      }
+      showMsg(rd.message || '无法开始填写', 'error');
+      return false;
+    }
+    if (!(await tryStart(usedToken))) return;
+    recomputeVisible();
+    renderQuestion();
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+function evaluateJump(jl, srcAns) {
+  const cond = jl.condition; const val = jl.value;
+  let matched = false;
+  if (cond === 'equals') matched = String(srcAns) === String(val);
+  else if (cond === 'not_equals') matched = String(srcAns) !== String(val);
+  else if (cond === 'contains') matched = (Array.isArray(srcAns) ? srcAns.map(String).includes(String(val)) : String(srcAns).includes(String(val)));
+  else if (cond === 'greater_than') matched = parseFloat(srcAns) > parseFloat(val);
+  else if (cond === 'less_than') matched = parseFloat(srcAns) < parseFloat(val);
+  return matched;
+}
+function resolveQuestionRef(ref) {
+  if (ref === undefined || ref === null || ref === '') return null;
+  return allQuestions.find(q => String(q.id) === String(ref)) ||
+         allQuestions.find(q => String(q.order) === String(ref)) || null;
+}
+function findMatchedSkipRule(question) {
+  return allQuestions.find(oq => {
+    const jl = oq.jump_logic || {};
+    if (jl.action !== 'skip_to') return false;
+    const srcQ = resolveQuestionRef(jl.source_question_id);
+    if (!srcQ || String(srcQ.id) !== String(question.id)) return false;
+    const srcAns = answers[question.id];
+    if (srcAns === undefined || srcAns === '' || (Array.isArray(srcAns) && srcAns.length === 0)) return false;
+    return evaluateJump(jl, srcAns);
+  }) || null;
+}
+function computeSkippedIds() {
+  // 按题目顺序重新推演完整路径，避免用户修改答案后残留旧的“已跳过”标记
+  const ordered = [...allQuestions].sort((a, b) => Number(a.order) - Number(b.order));
+  const skipped = new Set();
+  for (let i = 0; i < ordered.length; i++) {
+    const q = ordered[i];
+    const rule = findMatchedSkipRule(q);
+    if (!rule) continue;
+    const tgt = resolveQuestionRef(rule.jump_logic.target_question_id);
+    if (!tgt) continue;
+    const targetIdx = ordered.findIndex(x => String(x.id) === String(tgt.id));
+    if (targetIdx <= i) continue;
+    for (let j = i + 1; j < targetIdx; j++) skipped.add(String(ordered[j].id));
+    i = targetIdx;
+  }
+  return skipped;
+}
+function recomputeVisible() {
+  currentVisible = allQuestions.filter(q => {
+    const jl = q.jump_logic || {};
+    if (jl.source_question_id === undefined || jl.source_question_id === null || jl.source_question_id === '') return true;
+    let srcQid = jl.source_question_id;
+    if (answers[srcQid] === undefined) {
+      // 兼容旧数据：source_question_id 可能存的是题目顺序（order）
+      const srcQ = allQuestions.find(oq => String(oq.order) === String(jl.source_question_id));
+      if (srcQ) srcQid = srcQ.id;
+    }
+    const srcAns = answers[srcQid];
+    // 源题目未作答：show 默认隐藏，hide / skip_to 保持显示
+    if (srcAns === undefined || srcAns === '') return jl.action !== 'show';
+    const matched = evaluateJump(jl, srcAns);
+    if (jl.action === 'hide') return !matched;
+    if (jl.action === 'show') return matched;
+    return true; // skip_to 只影响导航，不影响题目可见性
+  });
+  skippedIds = computeSkippedIds();
+  if (currentIdx >= currentVisible.length) currentIdx = Math.max(0, currentVisible.length - 1);
+}
+function validationHint(q) {
+  const v = q.validation || {};
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  const parts = [];
+  if (q.type === 'multiple_choice') {
+    const exact = Number(v.exact_select);
+    if (has('exact_select') && Number.isInteger(exact) && exact >= 1) {
+      parts.push(`必须选择 ${exact} 个选项`);
+    } else {
+      const min = Number(v.min_select);
+      const max = Number(v.max_select);
+      if (has('min_select') && Number.isInteger(min) && min >= 1) parts.push(`至少选择 ${min} 个选项`);
+      if (has('max_select') && Number.isInteger(max) && max >= 1) parts.push(`最多选择 ${max} 个选项`);
+    }
+  } else if (q.type === 'text' || q.type === 'textarea') {
+    const minLength = Number(v.min_length);
+    const maxLength = Number(v.max_length);
+    if (has('min_length') && Number.isInteger(minLength)) parts.push(`最少 ${minLength} 字`);
+    if (has('max_length') && Number.isInteger(maxLength)) parts.push(`最多 ${maxLength} 字`);
+  } else if (q.type === 'number') {
+    const min = Number(v.min);
+    const max = Number(v.max);
+    if (has('min') && Number.isFinite(min)) parts.push(`最小值 ${min}`);
+    if (has('max') && Number.isFinite(max)) parts.push(`最大值 ${max}`);
+    if (v.integer_only) parts.push('仅允许整数');
+  }
+  return parts.length ? `限制：${parts.join('，')}` : '';
+}
+function textLimitAttrs(q) {
+  const v = q.validation || {};
+  const attrs = [];
+  const minLength = Number(v.min_length);
+  const maxLength = Number(v.max_length);
+  if (v.min_length !== undefined && v.min_length !== null && v.min_length !== '' && Number.isInteger(minLength) && minLength >= 0) attrs.push(`minlength="${minLength}"`);
+  if (v.max_length !== undefined && v.max_length !== null && v.max_length !== '' && Number.isInteger(maxLength) && maxLength >= 1) attrs.push(`maxlength="${maxLength}"`);
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+function numberLimitAttrs(q) {
+  const v = q.validation || {};
+  const attrs = [];
+  const min = Number(v.min);
+  const max = Number(v.max);
+  if (v.min !== undefined && v.min !== null && v.min !== '' && Number.isFinite(min)) attrs.push(`min="${min}"`);
+  if (v.max !== undefined && v.max !== null && v.max !== '' && Number.isFinite(max)) attrs.push(`max="${max}"`);
+  attrs.push(`step="${v.integer_only ? '1' : 'any'}"`);
+  return ' ' + attrs.join(' ');
+}
+function clientAnswerError(q, val) {
+  const empty = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
+  const v = q.validation || {};
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  if (q.type === 'multiple_choice') {
+    const count = Array.isArray(val) ? val.length : 0;
+    const exact = Number(v.exact_select);
+    const min = Number(v.min_select);
+    const max = Number(v.max_select);
+    if (has('exact_select') && Number.isInteger(exact) && exact >= 1) {
+      if (count !== exact) return `必须选择 ${exact} 个选项`;
+      return null;
+    }
+    if (has('min_select') && Number.isInteger(min) && min >= 1 && count < min) return `至少需要选择 ${min} 个选项`;
+    if (!empty && has('max_select') && Number.isInteger(max) && max >= 1 && count > max) return `最多只能选择 ${max} 个选项`;
+    return null;
+  }
+  if (empty) return null;
+  if (q.type === 'text' || q.type === 'textarea') {
+    const len = String(val == null ? '' : val).length;
+    const minLength = Number(v.min_length);
+    const maxLength = Number(v.max_length);
+    if (has('min_length') && len < minLength) return `长度不能少于 ${minLength} 字符`;
+    if (has('max_length') && len > maxLength) return `长度不能超过 ${maxLength} 字符`;
+  } else if (q.type === 'number') {
+    const raw = String(val == null ? '' : val).trim();
+    if (raw === '') return null;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return '请输入有效数字';
+    if (v.integer_only && !Number.isInteger(num)) return '必须为整数';
+    const min = Number(v.min);
+    const max = Number(v.max);
+    if (has('min') && num < min) return `数值不能小于 ${min}`;
+    if (has('max') && num > max) return `数值不能大于 ${max}`;
+  }
+  return null;
+}
+function renderQuestion() {
+  if (currentVisible.length === 0) { showFinish(); return; }
+  if (currentIdx >= currentVisible.length) { showFinish(); return; }
+  const q = currentVisible[currentIdx];
+  const qid = q.id;
+  const pct = Math.round(((currentIdx + 1) / currentVisible.length) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  const saved = answers[qid] !== undefined;
+  let html = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <div class="q-number">${currentIdx + 1}</div>
+        <div class="q-title">${escapeHtml(q.title)} ${q.required ? '<span class="q-required">*</span>' : ''} ${saved ? '<span class="q-answered">✓ 已作答</span>' : ''}</div>
+      </div>
+  `;
+  if (q.type === 'single_choice' || q.type === 'dropdown') {
+    const isDropdown = q.type === 'dropdown';
+    if (isDropdown) {
+      html += `<select id="ans-${qid}" onchange="saveAns('${qid}', this.value)">
+        <option value="">请选择</option>
+        ${(q.options || []).map(o => `<option value="${escapeHtml(o)}" ${answers[qid] === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
+      </select>`;
+    } else {
+      html += `<div class="options">`;
+      (q.options || []).forEach(o => {
+        const checked = answers[qid] === o;
+        html += `<label class="option"><input type="radio" name="q_${qid}" value="${escapeHtml(o)}" ${checked ? 'checked' : ''} onchange="saveAns('${qid}', this.value)">${escapeHtml(o)}</label>`;
+      });
+      html += `</div>`;
+    }
+  } else if (q.type === 'multiple_choice') {
+    html += `<div class="options">`;
+    (q.options || []).forEach(o => {
+      const isChecked = Array.isArray(answers[qid]) && answers[qid].includes(o);
+      html += `<label class="option option-multi"><input type="checkbox" name="q_${qid}" value="${escapeHtml(o)}" ${isChecked ? 'checked' : ''} onchange="saveMulti('${qid}', this)">${escapeHtml(o)}</label>`;
+    });
+    html += `</div>`;
+    if (validationHint(q)) html += `<div class="limit-hint">${validationHint(q)}</div>`;
+  } else if (q.type === 'text' || q.type === 'textarea') {
+    html += `<textarea id="ans-${qid}"${textLimitAttrs(q)} oninput="saveAns('${qid}', this.value)" oncompositionstart="isComposing=true" oncompositionend="isComposing=false; saveAns('${qid}', this.value)" placeholder="请输入您的回答">${escapeHtml(answers[qid] || '')}</textarea>`;
+    if (validationHint(q)) html += `<div class="limit-hint">${validationHint(q)}</div>`;
+  } else if (q.type === 'number') {
+    html += `<input type="number" id="ans-${qid}"${numberLimitAttrs(q)} oninput="saveAns('${qid}', this.value)" value="${escapeHtml(answers[qid] !== undefined ? answers[qid] : '')}">`;
+    if (validationHint(q)) html += `<div class="limit-hint">${validationHint(q)}</div>`;
+  } else if (q.type === 'rating') {
+    html += `<div class="rating">`;
+    const min = (q.validation && q.validation.min) || 1;
+    const max = (q.validation && q.validation.max) || 5;
+    for (let i = min; i <= max; i++) {
+      const checked = answers[qid] == i;
+      html += `<input type="radio" name="rating_${qid}" id="r_${qid}_${i}" value="${i}" ${checked ? 'checked' : ''} style="display:none"><label for="r_${qid}_${i}" class="${checked ? 'selected' : ''}" onclick="saveRating('${qid}', ${i})">${i}</label>`;
+    }
+    html += `</div>`;
+  } else if (q.type === 'date') {
+    html += `<input type="date" id="ans-${qid}" onchange="saveAns('${qid}', this.value)" value="${escapeHtml(answers[qid] || '')}">`;
+  } else if (q.type === 'file') {
+    html += `<div class="file-wrap" onclick="document.getElementById('file_${qid}').click()">
+      <div>点击上传文件</div>
+      <input type="file" id="file_${qid}" class="file-input" onchange="saveFile('${qid}', this)">
+    </div>`;
+  }
+  html += `<div class="err" id="err-${qid}"></div></div>`;
+  container.innerHTML = html;
+  document.getElementById('btnPrev').disabled = currentIdx === 0;
+  const isLast = currentIdx >= currentVisible.length - 1;
+  document.getElementById('btnNext').textContent = isLast ? '提交问卷' : '下一题';
+  document.getElementById('btnNext').className = `btn-nav btn-next ${isLast ? 'btn-submit' : ''}`;
+  // 恢复当前题目输入框焦点，避免 innerHTML 重建导致焦点丢失
+  const input = document.getElementById(`ans-${q.id}`);
+  if (input) { input.focus(); if (q.type === 'text' || q.type === 'textarea') input.setSelectionRange(input.value.length, input.value.length); }
+}
+function saveAns(qid, val) {
+  if (isComposing) return;
+  answers[qid] = val === '' || val === null ? undefined : val;
+  recomputeVisible();
+  scheduleDraftSave();
+}
+function saveRating(qid, val) {
+  answers[qid] = val;
+  document.querySelectorAll(`label[for^="r_${qid}_"]`).forEach(label => label.classList.remove('selected'));
+  const input = document.getElementById(`r_${qid}_${val}`);
+  const label = document.querySelector(`label[for="r_${qid}_${val}"]`);
+  if (input) input.checked = true;
+  if (label) label.classList.add('selected');
+  recomputeVisible();
+  scheduleDraftSave();
+}
+function saveMulti(qid, cb) {
+  const arr = Array.from(document.querySelectorAll(`input[name="q_${qid}"]:checked`)).map(i => i.value);
+  answers[qid] = arr.length ? arr : undefined;
+  recomputeVisible();
+  scheduleDraftSave();
+}
+function saveFile(qid, input) {
+  answers[qid] = input.files[0] ? input.files[0].name : undefined;
+  recomputeVisible();
+  scheduleDraftSave();
+}
+let draftTimer = null;
+let draftChain = Promise.resolve();
+function scheduleDraftSave() {
+  if (!responseId) return;
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    draftTimer = null;
+    saveDraft();
+  }, 400);
+}
+function saveDraft() {
+  if (!responseId) return draftChain;
+  const snapshot = JSON.stringify({ answers });
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  // 串行提交草稿，避免快速输入时旧请求晚到覆盖新答案
+  draftChain = draftChain
+    .then(() => fetch(`${API}/fill/responses/${responseId}/draft`, {
+      method: 'PUT', headers, body: snapshot
+    }))
+    .catch(() => {});
+  return draftChain;
+}
+function nextQ() {
+  if (currentVisible.length === 0) { submitSurvey(); return; }
+  const q = currentVisible[currentIdx];
+  const qid = q.id;
+  const errEl = document.getElementById('err-' + qid);
+  const val = answers[qid];
+  const isEmpty = val === undefined || val === '' || (Array.isArray(val) && val.length === 0);
+  if (q.required && isEmpty) {
+    errEl.textContent = '此题为必填项，请先作答';
+    errEl.style.display = 'block';
+    document.getElementById(`ans-${qid}`)?.focus?.();
+    return;
+  }
+  const invalid = clientAnswerError(q, val);
+  if (invalid) {
+    errEl.textContent = invalid;
+    errEl.style.display = 'block';
+    document.getElementById(`ans-${qid}`)?.focus?.();
+    return;
+  }
+  errEl.style.display = 'none';
+  if (currentIdx >= currentVisible.length - 1) {
+    submitSurvey();
+  } else {
+    // skip_to：查找以当前题目为源题目、且条件满足的跳转规则
+    const jumpRule = findMatchedSkipRule(q);
+    if (jumpRule) {
+      const targetRef = jumpRule.jump_logic.target_question_id;
+      const target = resolveQuestionRef(targetRef);
+      const targetIdx = target ? currentVisible.findIndex(vq => String(vq.id) === String(target.id)) : -1;
+      if (targetIdx > currentIdx) {
+        currentIdx = targetIdx;
+        renderQuestion();
+        return;
+      }
+    }
+    currentIdx++;
+    renderQuestion();
+  }
+}
+function prevQ() {
+  if (currentIdx > 0) { currentIdx--; renderQuestion(); }
+}
+async function submitSurvey() {
+  const visible = currentVisible;
+  for (const q of visible) {
+    if (skippedIds.has(q.id)) continue;
+    if (q.required) {
+      const val = answers[q.id];
+      if (val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
+        const idx = currentVisible.indexOf(q);
+        if (idx >= 0) currentIdx = idx;
+        renderQuestion();
+        const errEl = document.getElementById('err-' + q.id);
+        if (errEl) { errEl.textContent = '此题为必填项，请先作答'; errEl.style.display = 'block'; }
+        return;
+      }
+    }
+    const invalid = clientAnswerError(q, answers[q.id]);
+    if (invalid) {
+      const idx = currentVisible.indexOf(q);
+      if (idx >= 0) currentIdx = idx;
+      renderQuestion();
+      const errEl = document.getElementById('err-' + q.id);
+      if (errEl) { errEl.textContent = invalid; errEl.style.display = 'block'; }
+      document.getElementById(`ans-${q.id}`)?.focus?.();
+      return;
+    }
+  }
+  try {
+    let res;
+    const payload = { answers };
+    const emailInput = document.getElementById('emailInput');
+    const emailErr = document.getElementById('emailErr');
+    if (emailErr) emailErr.style.display = 'none';
+    if (emailInput && document.getElementById('emailBox').style.display !== 'none' && emailInput.value.trim()) {
+      const email = emailInput.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (emailErr) { emailErr.textContent = '邮箱格式不正确'; emailErr.style.display = 'block'; }
+        showMsg('请填写正确的邮箱地址', 'error');
+        return;
+      }
+      payload.email = email;
+    }
+    if (responseId) payload.response_id = responseId;
+    if (!isAnonymous) {
+      res = await fetch(`${API}/fill/surveys/${surveyId}/submit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      res = await fetch(`${API}/fill/surveys/${surveyId}/submit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    if (res.status === 401 && !isAnonymous) {
+      token = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      isAnonymous = true;
+      anonNote.style.display = 'block';
+      res = await fetch(`${API}/fill/surveys/${surveyId}/submit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    const d = await res.json();
+    if (res.ok) {
+      container.innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:16px">✓</div><div style="font-size:19px;font-weight:600">提交成功</div><div style="color:#666">感谢您的填写！</div></div>';
+      document.querySelector('.nav').style.display = 'none';
+      document.getElementById('progressBar').style.width = '100%';
+    } else {
+      if (d.data && typeof d.data === 'object') {
+        Object.entries(d.data).forEach(([qid, err]) => {
+          const el = document.getElementById('err-' + qid);
+          if (el) { el.textContent = err; el.style.display = 'block'; }
+        });
+      }
+      showMsg(d.message || '提交失败', 'error');
+    }
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+function showFinish() {
+  document.querySelector('.nav').style.display = 'none';
+  document.getElementById('progressBar').style.width = '100%';
+  container.innerHTML = '<div class="empty"><div style="font-size:19px;font-weight:600;margin-bottom:8px">暂无可填写的题目</div><div style="color:#666;margin-bottom:16px">所有题目均被跳转/显示条件隐藏，可直接提交。</div><button class="btn-nav btn-next btn-submit" onclick="submitSurvey()">提交问卷</button></div>';
+}
+function escapeHtml(str) { return String(str||'').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+init();
+</script>
+</body>
+</html>

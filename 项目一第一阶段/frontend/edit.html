@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>编辑问卷 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+  .topbar{background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10}
+  .logo{font-size:18px;font-weight:700;color:#4f46e5}
+  .nav{display:flex;align-items:center;gap:14px}
+  .btn-back{padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;color:#333;cursor:pointer;font-size:14px;text-decoration:none}
+  .btn-back:hover{background:#f9fafb}
+  .btn-save{padding:10px 22px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn-save:hover{background:#4338ca}
+  .btn-save:disabled{opacity:.65;cursor:not-allowed}
+  .btn-pub{padding:10px 22px;background:#1e7e34;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;margin-left:8px}
+  .btn-pub:hover{background:#157347}
+  .container{max-width:800px;margin:24px auto;padding:0 24px}
+  .page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+  .page-sub{color:#666;margin-bottom:20px;font-size:14px}
+  .status-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .badge-draft{background:#fff4e6;color:#b27a00}
+  .badge-published{background:#e7f4ea;color:#1e7e34}
+  .badge-closed{background:#fdecea;color:#b3261e}
+  .link-box{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .link-box input{flex:1;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#f9fafb}
+  .link-btn{padding:8px 14px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+  .link-btn:hover{background:#4338ca}
+  .card{background:#fff;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+  .form-group{margin-bottom:18px}
+  label{display:block;margin-bottom:8px;font-size:14px;font-weight:600;color:#333}
+  input,textarea,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none}
+  textarea{min-height:80px;resize:vertical}
+  .question-item{border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fff}
+  .question-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .q-title{font-weight:600;font-size:15px;color:#1a1a2e}
+  .q-type{font-size:12px;padding:4px 10px;border-radius:4px;background:#f0f1ff;color:#4f46e5}
+  .q-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .btn-q{font-size:12px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer}
+  .btn-q-up{color:#4f46e5}
+  .btn-q-down{color:#4f46e5}
+  .btn-q-del{color:#b3261e}
+  .field-row{display:flex;gap:10px;margin-bottom:10px;align-items:flex-end}
+  .field-row input{flex:1}
+  .btn-add-q{width:100%;padding:12px;background:#fff;border:2px dashed #ddd;border-radius:8px;color:#666;cursor:pointer;font-size:14px;transition:all .2s}
+  .btn-add-q:hover{border-color:#4f46e5;color:#4f46e5;background:#f0f1ff}
+  .settings-label{font-weight:600;margin-bottom:10px;display:block;color:#333}
+  .setting-item{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:14px}
+  .setting-item input{width:auto}
+  .disabled{opacity:.6;pointer-events:none}
+  .jump-card{border:1px solid #eef;border-radius:8px;padding:14px;margin-top:14px;background:#fafbff;display:none}
+  .jump-card.show{display:block}
+  .jump-row select,.jump-row input{flex:1;min-width:120px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+  .jump-row input{flex:2}
+  .jump-del{background:#fee2e2;color:#b3261e;border:none;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px}
+  .jump-del:hover{background:#fecaca}
+  .jump-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .jump-save{background:#4f46e5;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+  .jump-save:hover{background:#4338ca}
+  .jump-save:disabled{opacity:.65;cursor:not-allowed}
+  .jump-save-msg{display:inline-block;font-size:12px;font-weight:600;min-height:16px}
+  .jump-hint{font-size:12px;color:#999;margin-top:6px}
+  .collapse-btn{background:none;border:none;color:#4f46e5;font-size:13px;cursor:pointer;padding:4px 0}
+  .collapse-btn:hover{text-decoration:underline}
+  #msg{margin-top:16px;padding:10px;border-radius:6px;font-size:13px;display:none}
+  .error{background:#fdecea;color:#b3261e;border:1px solid #f5c6c6}
+  .success{background:#e7f4ea;color:#1e7e34;border:1px solid #c3e6cb}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">问卷系统</div>
+  <div class="nav">
+    <a class="btn-back" href="dashboard.html">返回列表</a>
+    <button type="button" class="btn-save" id="btnSave">保存修改</button>
+    <button type="button" class="btn-pub" id="btnPub">发布问卷</button>
+  </div>
+</div>
+<div class="container">
+  <div class="page-title" id="pageTitle">编辑问卷</div>
+  <div class="page-sub">修改问卷内容和题目</div>
+  <div id="msg" class="error"></div>
+  <div class="status-row">
+    <div>
+      <span class="badge" id="statusBadge">草稿</span>
+    </div>
+  </div>
+  <form id="surveyForm">
+    <div class="card">
+      <div class="form-group">
+        <label>问卷标题 <span style="color:#4f46e5">*</span></label>
+        <input id="title" required maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>问卷描述</label>
+        <textarea id="description" placeholder="简要说明问卷的目的和填写说明"></textarea>
+      </div>
+      <div class="form-group">
+        <label>截止日期</label>
+        <input type="datetime-local" id="deadline">
+        <div class="hint">不填则问卷永久有效，到达后将无法再填写</div>
+      </div>
+    </div>
+    <div class="card" id="settingsCard">
+      <div class="settings-label">问卷设置</div>
+      <label class="setting-item"><input type="checkbox" id="allowAnonymous" checked> 允许匿名填写</label>
+      <label class="setting-item"><input type="checkbox" id="showProgress" checked> 显示填写进度</label>
+      <label class="setting-item"><input type="checkbox" id="onePerUser"> 每用户限填一次</label>
+      <label class="setting-item"><input type="checkbox" id="collectEmail"> 收集填写人邮箱</label>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="settings-label">题目列表</div>
+        <span class="hint" style="font-size:12px">共 <span id="qCount">0</span> 道题目</span>
+      </div>
+      <div id="questionList"></div>
+      <button type="button" class="btn-add-q" id="btnAddQ">+ 添加题目</button>
+    </div>
+  </form>
+</div>
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = 'login.html'; }
+const msg = document.getElementById('msg');
+const urlParams = new URLSearchParams(location.search);
+const surveyId = urlParams.get('id');
+const surveyIdValid = /^[a-f0-9]{24}$/i.test(surveyId || '');
+let survey = null;
+let questions = [];
+let questionTypes = [
+  { value: 'single_choice', label: '单选题', needsOptions: true },
+  { value: 'multiple_choice', label: '多选题', needsOptions: true },
+  { value: 'text', label: '文本填空题', needsOptions: false },
+  { value: 'number', label: '数字填空题', needsOptions: false }
+];
+function showMsg(text, type) {
+  msg.textContent = text; msg.className = type === 'error' ? 'error' : 'success';
+  msg.style.display = 'block';
+  if (type === 'success') setTimeout(() => msg.style.display = 'none', 2000);
+}
+function typeLabel(t) {
+  const m = { single_choice: '单选题', multiple_choice: '多选题', text: '文本填空题', number: '数字填空题' };
+  return m[t] || t;
+}
+function validationSupported(type) {
+  return ['multiple_choice', 'text', 'textarea', 'number'].includes(type);
+}
+function isValidationOpen(q) {
+  return q._validationOpen !== undefined ? q._validationOpen : Object.keys(q.validation || {}).length > 0;
+}
+function validationSummary(q, v) {
+  const parts = [];
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  if (q.type === 'multiple_choice') {
+    if (has('exact_select')) parts.push(`必须选择 ${v.exact_select} 项`);
+    else {
+      if (has('min_select')) parts.push(`最少选择 ${v.min_select} 项`);
+      if (has('max_select')) parts.push(`最多选择 ${v.max_select} 项`);
+    }
+  } else if (q.type === 'text' || q.type === 'textarea') {
+    if (has('min_length')) parts.push(`最少 ${v.min_length} 字`);
+    if (has('max_length')) parts.push(`最多 ${v.max_length} 字`);
+  } else if (q.type === 'number') {
+    if (has('min')) parts.push(`最小值 ${v.min}`);
+    if (has('max')) parts.push(`最大值 ${v.max}`);
+    if (v.integer_only) parts.push('仅允许整数');
+  }
+  return parts.length ? `限制：${parts.join('，')}` : '暂未设置限制条件';
+}
+function validationFieldsHtml(idx, q, disabled) {
+  if (!validationSupported(q.type)) return '';
+  const saved = q.validation || {};
+  const v = q._validationDraft || saved;
+  const dirty = !!q._validationDraft;
+  const open = isValidationOpen(q);
+  const dis = disabled ? 'disabled' : '';
+  const numVal = key => (v[key] === undefined || v[key] === null) ? '' : v[key];
+  const numInput = (id, key, placeholder, attrs = '') => `<input type="number" id="${id}" ${attrs} ${dis} value="${numVal(key)}" placeholder="${placeholder}" onchange="updateValidation(${idx}, '${key}', this.value)" style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">`;
+  const row = (label, body) => `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="margin:0;font-size:12px;font-weight:400;color:#666;white-space:nowrap">${label}</label>${body}</div>`;
+  let fields = '';
+  let hint = '';
+  if (q.type === 'multiple_choice') {
+    fields = row('最少选择数', numInput(`limitMinSelect-${idx}`, 'min_select', '如 2', 'min="1" step="1"'))
+      + row('最多选择数', numInput(`limitMaxSelect-${idx}`, 'max_select', '如 3', 'min="1" step="1"'))
+      + row('必须选择数', numInput(`limitExactSelect-${idx}`, 'exact_select', '如 2', 'min="1" step="1"'));
+    hint = '留空表示不限制；“必须选择数”与最少/最多选择数互斥；修改后请点击“保存限制条件”';
+  } else if (q.type === 'text' || q.type === 'textarea') {
+    fields = row('最少字数', numInput(`limitMinLength-${idx}`, 'min_length', '如 10', 'min="0" step="1"'))
+      + row('最多字数', numInput(`limitMaxLength-${idx}`, 'max_length', '如 500', 'min="1" step="1"'));
+    hint = '留空表示不限制；字数按字符数统计，修改后请点击“保存限制条件”';
+  } else if (q.type === 'number') {
+    fields = row('最小值', numInput(`limitMin-${idx}`, 'min', '如 0', 'step="any"'))
+      + row('最大值', numInput(`limitMax-${idx}`, 'max', '如 100', 'step="any"'))
+      + `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:13px;font-weight:400;color:#666"><input type="checkbox" id="limitInteger-${idx}" style="width:auto" ${v.integer_only ? 'checked' : ''} ${dis} onchange="updateValidation(${idx}, 'integer_only', this.checked)"> 仅允许整数</label>`;
+    hint = '留空表示不限制；修改后请点击“保存限制条件”';
+  }
+  const preview = `${dirty ? '（未保存）' : ''}${validationSummary(q, v)}`;
+  return `
+    <div class="jump-card ${open ? 'show' : ''}" id="limitCard-${idx}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600;color:#4f46e5">⚙ 限制条件</span>
+        <button type="button" class="collapse-btn" onclick="toggleValidation(${idx})">收起</button>
+      </div>
+      <div class="jump-preview" id="limitPreview-${idx}" style="margin-bottom:12px;padding:10px;background:#f0f1ff;border-radius:6px;font-size:13px;color:#1a1a2e">${preview}</div>
+      <div class="jump-row" style="display:flex;flex-direction:column;gap:10px">${fields}</div>
+      <div class="jump-actions" style="margin-top:10px">
+        <button type="button" class="jump-save" id="limitSave-${idx}" onclick="saveValidation(${idx})" ${dis}>保存限制条件</button>
+        <button type="button" class="jump-del" onclick="clearValidation(${idx})" ${dis}>× 清除限制条件</button>
+        <span class="jump-save-msg" id="limitSaveMsg-${idx}" aria-live="polite" style="color:${dirty ? '#b27a00' : '#1e7e34'}">${dirty ? '有未保存的修改' : ''}</span>
+      </div>
+      <div class="jump-hint">${hint}</div>
+    </div>`;
+}
+function updateValidation(idx, key, value) {
+  if (survey && survey.status !== 'draft') return;
+  const q = questions[idx];
+  const draft = Object.assign({}, q._validationDraft || q.validation || {});
+  if (typeof value === 'boolean') {
+    if (value) draft[key] = true;
+    else delete draft[key];
+  } else {
+    const text = String(value).trim();
+    if (text === '') {
+      delete draft[key];
+    } else {
+      const num = Number(text);
+      if (Number.isNaN(num)) delete draft[key];
+      else draft[key] = num;
+    }
+  }
+  q._validationDraft = draft;
+  q._validationOpen = true;
+  const preview = document.getElementById(`limitPreview-${idx}`);
+  if (preview) preview.textContent = '（未保存）' + validationSummary(q, draft);
+  markValidationDirty(idx);
+}
+function readValidationForm(idx) {
+  const q = questions[idx];
+  const rules = Object.assign({}, q.validation || {});
+  const readNum = (key, id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = String(el.value).trim();
+    if (text === '') { delete rules[key]; return; }
+    const num = Number(text);
+    rules[key] = Number.isNaN(num) ? text : num;
+  };
+  if (q.type === 'multiple_choice') {
+    delete rules.min_select;
+    delete rules.max_select;
+    delete rules.exact_select;
+    readNum('min_select', `limitMinSelect-${idx}`);
+    readNum('max_select', `limitMaxSelect-${idx}`);
+    readNum('exact_select', `limitExactSelect-${idx}`);
+  } else if (q.type === 'text' || q.type === 'textarea') {
+    delete rules.min_length;
+    delete rules.max_length;
+    readNum('min_length', `limitMinLength-${idx}`);
+    readNum('max_length', `limitMaxLength-${idx}`);
+  } else if (q.type === 'number') {
+    delete rules.min;
+    delete rules.max;
+    delete rules.integer_only;
+    readNum('min', `limitMin-${idx}`);
+    readNum('max', `limitMax-${idx}`);
+    const cb = document.getElementById(`limitInteger-${idx}`);
+    if (cb && cb.checked) rules.integer_only = true;
+  }
+  return rules;
+}
+function validateValidationRules(q, label, v) {
+  v = v || {};
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  if (q.type === 'multiple_choice') {
+    const mn = Number(v.min_select);
+    const mx = Number(v.max_select);
+    const exact = Number(v.exact_select);
+    const optCount = (q.options || []).length;
+    if (has('min_select') && (!Number.isInteger(mn) || mn < 1)) return `${label}最少选择数必须是不小于 1 的整数`;
+    if (has('max_select') && (!Number.isInteger(mx) || mx < 1)) return `${label}最多选择数必须是不小于 1 的整数`;
+    if (has('exact_select') && (!Number.isInteger(exact) || exact < 1)) return `${label}必须选择数必须是不小于 1 的整数`;
+    if (has('exact_select') && (has('min_select') || has('max_select'))) return `${label}“必须选择数”不能与最少/最多选择数同时设置`;
+    if (has('min_select') && has('max_select') && mn > mx) return `${label}最少选择数不能大于最多选择数`;
+    if (has('min_select') && optCount && mn > optCount) return `${label}最少选择数不能超过选项总数`;
+    if (has('max_select') && optCount && mx > optCount) return `${label}最多选择数不能超过选项总数`;
+    if (has('exact_select') && optCount && exact > optCount) return `${label}必须选择数不能超过选项总数`;
+  }
+  if (q.type === 'text' || q.type === 'textarea') {
+    const mn = Number(v.min_length);
+    const mx = Number(v.max_length);
+    if (has('min_length') && (!Number.isInteger(mn) || mn < 0)) return `${label}最少字数必须是不小于 0 的整数`;
+    if (has('max_length') && (!Number.isInteger(mx) || mx < 1)) return `${label}最多字数必须是不小于 1 的整数`;
+    if (has('min_length') && has('max_length') && mn > mx) return `${label}最少字数不能大于最多字数`;
+  }
+  if (q.type === 'number') {
+    if (has('min') && !Number.isFinite(Number(v.min))) return `${label}最小值必须是有效数字`;
+    if (has('max') && !Number.isFinite(Number(v.max))) return `${label}最大值必须是有效数字`;
+    if (has('min') && has('max') && Number(v.min) > Number(v.max)) return `${label}最小值不能大于最大值`;
+  }
+  return null;
+}
+function toggleValidation(idx) {
+  const card = document.getElementById('limitCard-' + idx);
+  if (!card) return;
+  card.classList.toggle('show');
+  const open = card.classList.contains('show');
+  questions[idx]._validationOpen = open;
+  const btn = document.getElementById('limitToggle-' + idx);
+  if (btn) btn.textContent = open ? '隐藏限制条件' : '显示限制条件';
+}
+function markValidationDirty(idx) {
+  const el = document.getElementById('limitSaveMsg-' + idx);
+  if (!el) return;
+  if (el._timer) { clearTimeout(el._timer); el._timer = null; }
+  el.textContent = '有未保存的修改';
+  el.style.color = '#b27a00';
+}
+function showValidationMsg(idx, text, isError) {
+  const el = document.getElementById('limitSaveMsg-' + idx);
+  if (!el) return;
+  if (el._timer) { clearTimeout(el._timer); el._timer = null; }
+  el.textContent = text;
+  el.style.color = isError ? '#b3261e' : '#1e7e34';
+  if (!isError) el._timer = setTimeout(() => { el.textContent = ''; }, 2500);
+}
+async function saveValidation(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const q = questions[idx];
+  if (!validationSupported(q.type)) return;
+  const rules = readValidationForm(idx);
+  const err = validateValidationRules(q, `第${idx + 1}题`, rules);
+  if (err) {
+    showValidationMsg(idx, err, true);
+    showMsg(err, 'error');
+    return;
+  }
+  const canPersist = !!q.id;
+  const saveBtn = document.getElementById('limitSave-' + idx);
+  if (canPersist) {
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中...'; }
+    try {
+      const res = await fetch(`${API}/surveys/questions/${q.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ validation: rules })
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showValidationMsg(idx, d.message || '保存失败', true);
+        showMsg(d.message || '保存失败', 'error');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存限制条件'; }
+        return;
+      }
+    } catch (e) {
+      showValidationMsg(idx, '网络错误，保存失败', true);
+      showMsg('网络错误，保存失败', 'error');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存限制条件'; }
+      return;
+    }
+  }
+  q.validation = rules;
+  delete q._validationDraft;
+  q._validationOpen = true;
+  renderQuestions();
+  showValidationMsg(idx, canPersist ? '保存成功' : `保存成功（保存问卷后生效）：${validationSummary(q, rules)}`);
+  showMsg('保存成功', 'success');
+}
+async function clearValidation(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const q = questions[idx];
+  const qid = q.id;
+  q.validation = {};
+  delete q._validationDraft;
+  q._validationOpen = false;
+  renderQuestions();
+  if (!qid) {
+    showMsg('已清除限制条件（保存问卷后生效）', 'success');
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/surveys/questions/${qid}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ validation: {} })
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      showMsg(d.message || '清除限制条件失败', 'error');
+      return;
+    }
+    showMsg('已清除限制条件', 'success');
+  } catch (e) {
+    showMsg('网络错误，清除限制条件未同步', 'error');
+  }
+}
+function validateQuestionsConfig() {
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const label = `第${i + 1}题`;
+    if (!q.title || !String(q.title).trim()) return `${label}题目内容不能为空`;
+    if (['single_choice', 'multiple_choice'].includes(q.type)) {
+      const opts = (q.options || []).map(o => String(o).trim()).filter(Boolean);
+      if (opts.length < 2) return `${label}至少需要 2 个选项`;
+      if (new Set(opts).size !== opts.length) return `${label}选项不能重复`;
+    }
+    if (q._validationDraft) return `${label}限制条件有未保存的修改，请先点击“保存限制条件”`;
+    const ruleError = validateValidationRules(q, label, q.validation || {});
+    if (ruleError) return ruleError;
+    if (q._jumpDraft) return `${label}跳转逻辑有未保存的修改，请先点击“保存跳转逻辑”`;
+    const jl = q.jump_logic || {};
+    if (jl.condition) {
+      if (!jl.source_question_id || !jl.target_question_id || !jl.action) return `${label}跳转逻辑不完整，请选择源题目和目标题目`;
+      const ref = (oq) => oq.id || oq._tmpId || `tmp_${oq.order}`;
+      const srcIdx = questions.findIndex(oq => String(ref(oq)) === String(jl.source_question_id));
+      const tgtIdx = questions.findIndex(oq => String(ref(oq)) === String(jl.target_question_id));
+      if (srcIdx < 0 || tgtIdx < 0) return `${label}跳转逻辑引用的题目不存在`;
+      const vals = Array.isArray(jl.value) ? jl.value : [jl.value];
+      if (!vals.length || vals.every(x => String(x == null ? '' : x).trim() === '')) return `${label}请填写跳转条件的比对值`;
+      if (jl.action === 'skip_to' && tgtIdx <= srcIdx) return `${label}跳转目标必须位于触发题目之后`;
+    }
+  }
+  return null;
+}
+async function loadSurvey() {
+  if (!surveyIdValid) {
+    showMsg('问卷 ID 缺失或无效，请从问卷列表重新进入', 'error');
+    document.getElementById('btnSave').disabled = true;
+    document.getElementById('btnPub').disabled = true;
+    document.getElementById('btnAddQ').disabled = true;
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/surveys/${surveyId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { showMsg('加载失败', 'error'); return; }
+    const data = await res.json();
+    survey = data.data;
+    document.getElementById('title').value = survey.title || '';
+    document.getElementById('description').value = survey.description || '';
+    if (survey.deadline) {
+      const d = new Date(survey.deadline);
+      const pad = n => String(n).padStart(2, '0');
+      document.getElementById('deadline').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    const s = survey.settings || {};
+    document.getElementById('allowAnonymous').checked = s.allow_anonymous !== false;
+    document.getElementById('showProgress').checked = s.show_progress !== false;
+    document.getElementById('onePerUser').checked = s.one_per_user === true;
+    document.getElementById('collectEmail').checked = s.collect_email === true;
+    document.getElementById('statusBadge').textContent = survey.status === 'published' ? '已发布' : survey.status === 'closed' ? '已关闭' : '草稿';
+    document.getElementById('statusBadge').className = `badge badge-${survey.status || 'draft'}`;
+    document.getElementById('btnPub').textContent = survey.status === 'published' ? '已发布' : '发布问卷';
+    document.getElementById('btnPub').disabled = survey.status !== 'draft';
+    if (survey.status !== 'draft') {
+      document.getElementById('settingsCard').classList.add('disabled');
+      document.getElementById('btnSave').disabled = true;
+      document.getElementById('btnAddQ').disabled = true;
+      document.getElementById('deadline').disabled = true;
+      document.getElementById('title').disabled = true;
+      document.getElementById('description').disabled = true;
+    }
+    questions = (survey.questions || []).map(q => ({ ...q }));
+    // 兼容旧数据：跳转引用若存的是题目顺序（order），迁移为题目 id
+    questions.forEach(q => {
+      const jl = q.jump_logic || {};
+      if (jl.source_question_id === undefined || jl.source_question_id === null || jl.source_question_id === '') return;
+      if (!questions.some(oq => oq.id === jl.source_question_id)) {
+        const src = questions.find(oq => String(oq.order) === String(jl.source_question_id));
+        if (src) jl.source_question_id = src.id;
+      }
+      if (questions.some(oq => oq.id === jl.target_question_id)) {
+        // 已规范
+      } else {
+        const tgt = questions.find(oq => String(oq.order) === String(jl.target_question_id));
+        if (tgt) jl.target_question_id = tgt.id;
+      }
+      if ((jl.action === 'hide' || jl.action === 'show') && q.id) {
+        jl.target_question_id = q.id;
+      }
+    });
+    renderQuestions();
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+function renderQuestions() {
+  const container = document.getElementById('questionList');
+  container.innerHTML = '';
+  document.getElementById('qCount').textContent = questions.length;
+  const published = survey && survey.status !== 'draft';
+  questions.forEach((q, idx) => {
+    const jumpDirty = !!q._jumpDraft;
+    const jl = q._jumpDraft || q.jump_logic || {};
+    const jumpOpen = q._jumpOpen !== undefined ? q._jumpOpen : !!jl.condition;
+    const otherQuestions = questions.filter((_, i) => i !== idx);
+    const qRef = (oq) => oq.id || oq._tmpId || `tmp_${oq.order}`;
+    const visibilityAction = jl.action === 'hide' || jl.action === 'show';
+    const targetQuestions = visibilityAction ? [q, ...otherQuestions] : otherQuestions;
+    const selectedValues = Array.isArray(jl.value) ? jl.value.map(String) : [String(jl.value == null ? '' : jl.value)];
+    const optionHtml = (oq) => (oq.options||[]).map(o => `<option value="${escapeHtml(o)}" ${selectedValues.includes(String(o)) ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+    const previewValue = Array.isArray(jl.value) ? jl.value.join('、') : (jl.value || '');
+    const srcQuestion = otherQuestions.find(oq => String(qRef(oq)) === String(jl.source_question_id||''));
+    const srcIdx = questions.findIndex(oq => String(qRef(oq)) === String(jl.source_question_id||''));
+    const tgtIdx = questions.findIndex(oq => String(qRef(oq)) === String(jl.target_question_id||''));
+    const validationHtml = validationFieldsHtml(idx, q, published);
+    const validationOpen = isValidationOpen(q);
+    const previewText = jl.condition ? `当第${srcIdx>=0?srcIdx+1:'?'}题${jl.condition==='equals'?'等于':jl.condition==='not_equals'?'不等于':jl.condition==='contains'?'包含':jl.condition==='greater_than'?'大于':'小于'}"${escapeHtml(previewValue)}"时，${jl.action==='skip_to'?'跳转到':jl.action==='hide'?'隐藏':'显示'}第${tgtIdx>=0?tgtIdx+1:'?'}题` : '暂无跳转逻辑';
+    const preview = (jumpDirty ? '（未保存）' : '') + previewText;
+    let jumpValHtml = '';
+    if (!srcQuestion) {
+      jumpValHtml = `<input id="jumpVal-${idx}" type="text" placeholder="请先选择源题目" disabled style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#f5f5f5;color:#999">`;
+    } else if (srcQuestion.type === 'single_choice') {
+      jumpValHtml = `<select id="jumpVal-${idx}" onchange="updateJump(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">${optionHtml(srcQuestion)}</select>`;
+    } else if (srcQuestion.type === 'multiple_choice') {
+      jumpValHtml = `<select id="jumpVal-${idx}" multiple onchange="updateJump(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">${optionHtml(srcQuestion)}</select>`;
+    } else {
+      jumpValHtml = `<input id="jumpVal-${idx}" type="text" placeholder="输入比对值" value="${escapeHtml(previewValue)}" onchange="updateJump(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">`;
+    }
+    const el = document.createElement('div');
+    el.className = 'question-item';
+    el.innerHTML = `
+      <div class="question-header">
+        <div><div class="q-title">${escapeHtml(q.title)}</div><div class="q-type">${typeLabel(q.type)} ${q.required ? '<span style="color:#1e7e34">必填</span>' : ''}</div></div>
+        <div class="q-actions">
+          ${idx > 0 ? `<button type="button" class="btn-q btn-q-up" onclick="moveQuestion(${idx}, -1)" ${published ? 'disabled' : ''}>↑</button>` : `<button type="button" class="btn-q btn-q-up" disabled>↑</button>`}
+          ${idx < questions.length - 1 ? `<button type="button" class="btn-q btn-q-down" onclick="moveQuestion(${idx}, 1)" ${published ? 'disabled' : ''}>↓</button>` : `<button type="button" class="btn-q btn-q-down" disabled>↓</button>`}
+          <button type="button" class="btn-q btn-q-del" onclick="removeQuestion(${idx})" ${published ? 'disabled' : ''}>删除</button>
+          ${validationSupported(q.type) ? `<button type="button" class="collapse-btn" id="limitToggle-${idx}" onclick="toggleValidation(${idx})">${validationOpen?'隐藏':'显示'}限制条件</button>` : ''}
+          <button type="button" class="collapse-btn" id="jumpToggle-${idx}" onclick="toggleJump(${idx})">${jumpOpen?'隐藏':'显示'}跳转逻辑</button>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;margin-bottom:6px;font-size:13px;color:#666">题目内容</label>
+        <input type="text" value="${escapeHtml(q.title)}" onchange="updateQ(${idx}, 'title', this.value)" ${published ? 'disabled' : ''} placeholder="输入题目">
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;margin-bottom:6px;font-size:13px;color:#666">题目类型</label>
+        <select onchange="updateQ(${idx}, 'type', this.value)" ${published ? 'disabled' : ''}>
+          ${questionTypes.map(t => `<option value="${t.value}" ${q.type === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:10px;display:flex;justify-content:center">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#666"><input type="checkbox" ${q.required ? 'checked' : ''} onchange="updateQ(${idx}, 'required', this.checked)" ${published ? 'disabled' : ''}> 必填题</label>
+      </div>
+      ${validationHtml}
+      ${q.options && q.options.length ? `
+      <div style="margin-bottom:10px">
+        <label style="display:block;margin-bottom:6px;font-size:13px;color:#666">选项</label>
+        <div id="opts-${idx}">${q.options.map((o, oi) => `<div class="field-row"><input value="${escapeHtml(o)}" onchange="updateOption(${idx}, ${oi}, this.value)" ${published ? 'disabled' : ''}><button type="button" class="btn-q btn-q-del" style="padding:2px 8px" onclick="removeOption(${idx}, ${oi})">×</button></div>`).join('')}</div>
+        <button type="button" class="btn-q" style="padding:6px 12px;background:#fff;border:1px solid #ddd;color:#4f46e5" onclick="addOption(${idx})" ${published ? 'disabled' : ''}>+ 添加选项</button>
+      </div>` : ''}
+      <div class="jump-card ${jumpOpen ? 'show' : ''}" id="jumpCard-${idx}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:13px;font-weight:600;color:#4f46e5">↳ 跳转逻辑</span>
+          <button type="button" class="collapse-btn" onclick="toggleJump(${idx})">收起</button>
+        </div>
+        <div class="jump-preview" style="margin-bottom:12px;padding:10px;background:#f0f1ff;border-radius:6px;font-size:13px;color:#1a1a2e">${preview}</div>
+        <div class="jump-row" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="font-size:12px;color:#666;white-space:nowrap">当</label>
+            <select id="jumpSrc-${idx}" onchange="onJumpSrcChange(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+              <option value="">选择源题目（触发条件的题目）</option>
+              ${otherQuestions.map(oq => `<option value="${qRef(oq)}" ${String(jl.source_question_id||'')===String(qRef(oq))?'selected':''}>第${otherQuestions.indexOf(oq)+1}题：${escapeHtml(oq.title)}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="font-size:12px;color:#666;white-space:nowrap">的条件</label>
+            <select id="jumpCond-${idx}" onchange="updateJump(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+              <option value="equals" ${jl.condition==='equals'?'selected':''}>等于</option>
+              <option value="not_equals" ${jl.condition==='not_equals'?'selected':''}>不等于</option>
+              <option value="contains" ${jl.condition==='contains'?'selected':''}>包含</option>
+              <option value="greater_than" ${jl.condition==='greater_than'?'selected':''}>大于</option>
+              <option value="less_than" ${jl.condition==='less_than'?'selected':''}>小于</option>
+            </select>
+            <label style="font-size:12px;color:#666;white-space:nowrap" style="margin-left:8px">值</label>
+            ${jumpValHtml}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="font-size:12px;color:#666;white-space:nowrap">时，对</label>
+            <select id="jumpTarget-${idx}" onchange="updateJump(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+              <option value="">选择目标题目</option>
+              ${targetQuestions.map(oq => `<option value="${qRef(oq)}" ${String(jl.target_question_id||'')===String(qRef(oq))?'selected':''}>第${questions.indexOf(oq)+1}题：${escapeHtml(oq.title)}</option>`).join('')}
+            </select>
+            <label style="font-size:12px;color:#666;white-space:nowrap" style="margin-left:8px">执行</label>
+            <select id="jumpAction-${idx}" onchange="onJumpActionChange(${idx})" ${published ? 'disabled' : ''} style="flex:1;min-width:100px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+              <option value="skip_to" ${jl.action==='skip_to'?'selected':''}>跳转到</option>
+              <option value="hide" ${jl.action==='hide'?'selected':''}>隐藏</option>
+              <option value="show" ${jl.action==='show'?'selected':''}>显示</option>
+            </select>
+          </div>
+          <div class="jump-actions">
+            <button type="button" class="jump-save" id="jumpSave-${idx}" onclick="saveJump(${idx})" ${published ? 'disabled' : ''}>保存跳转逻辑</button>
+            <button type="button" class="jump-del" onclick="clearJump(${idx})" ${published ? 'disabled' : ''}>× 清除跳转逻辑</button>
+            <span class="jump-save-msg" id="jumpSaveMsg-${idx}" aria-live="polite" style="color:${jumpDirty ? '#b27a00' : '#1e7e34'}">${jumpDirty ? '有未保存的修改' : ''}</span>
+          </div>
+        </div>
+        <div class="jump-hint" style="margin-top:8px">示例：当“第1题”等于“选项A”时，自动跳转到/隐藏/显示第3题；修改后请点击“保存跳转逻辑”</div>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+  document.getElementById('btnAddQ').disabled = published;
+}
+function toggleJump(idx) {
+  const card = document.getElementById('jumpCard-' + idx);
+  if (!card) return;
+  card.classList.toggle('show');
+  const open = card.classList.contains('show');
+  questions[idx]._jumpOpen = open;
+  const btn = document.getElementById('jumpToggle-' + idx);
+  if (btn) btn.textContent = open ? '隐藏跳转逻辑' : '显示跳转逻辑';
+}
+async function clearJump(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const q = questions[idx];
+  const qid = q.id;
+  q.jump_logic = {};
+  delete q._jumpDraft;
+  q._jumpOpen = false;
+  renderQuestions();
+  if (!qid) {
+    showMsg('已清除跳转逻辑（保存问卷后生效）', 'success');
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/surveys/questions/${qid}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ jump_logic: {} })
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      showMsg(d.message || '清除跳转逻辑失败', 'error');
+      return;
+    }
+    showMsg('已清除跳转逻辑', 'success');
+  } catch (e) {
+    showMsg('网络错误，清除跳转逻辑未同步', 'error');
+  }
+}
+function markJumpDirty(idx) {
+  const el = document.getElementById('jumpSaveMsg-' + idx);
+  if (!el) return;
+  if (el._timer) { clearTimeout(el._timer); el._timer = null; }
+  el.textContent = '有未保存的修改';
+  el.style.color = '#b27a00';
+}
+function showJumpMsg(idx, text, isError) {
+  const el = document.getElementById('jumpSaveMsg-' + idx);
+  if (!el) return;
+  if (el._timer) { clearTimeout(el._timer); el._timer = null; }
+  el.textContent = text;
+  el.style.color = isError ? '#b3261e' : '#1e7e34';
+  if (!isError) el._timer = setTimeout(() => { el.textContent = ''; }, 2500);
+}
+function readJumpForm(idx) {
+  const q = questions[idx];
+  const srcEl = document.getElementById('jumpSrc-' + idx);
+  const condEl = document.getElementById('jumpCond-' + idx);
+  const targetEl = document.getElementById('jumpTarget-' + idx);
+  const actionEl = document.getElementById('jumpAction-' + idx);
+  if (!srcEl || !condEl || !targetEl || !actionEl) return null;
+  const src = srcEl.value;
+  const cond = condEl.value;
+  const valEl = document.getElementById('jumpVal-' + idx);
+  let value = '';
+  if (valEl) {
+    if (valEl.tagName === 'SELECT' && valEl.multiple) {
+      value = Array.from(valEl.selectedOptions).map(o => o.value);
+    } else {
+      value = valEl.value;
+    }
+  }
+  let target = targetEl.value;
+  const action = actionEl.value;
+  // hide/show 固定作用于当前题目本身，与后端 questions.jump_logic 的语义保持一致
+  if (action === 'hide' || action === 'show') {
+    target = q.id || q._tmpId || `tmp_${q.order}`;
+  }
+  return { src, cond, value, target, action };
+}
+function buildJump(form) {
+  return {
+    source_question_id: form.src,
+    condition: form.cond,
+    target_question_id: form.target,
+    action: form.action,
+    value: form.value
+  };
+}
+function validateJumpForm(idx, form) {
+  const label = `第${idx + 1}题`;
+  if (!form) return `${label}跳转逻辑表单不存在`;
+  if (!form.src) return `${label}请选择跳转的源题目`;
+  if (!form.cond) return `${label}请选择跳转条件`;
+  if (!form.action) return `${label}请选择跳转动作`;
+  const vals = Array.isArray(form.value) ? form.value : [form.value];
+  if (!vals.length || vals.every(v => String(v == null ? '' : v).trim() === '')) {
+    return `${label}请填写跳转条件的比对值`;
+  }
+  const qRef = (oq) => oq.id || oq._tmpId || `tmp_${oq.order}`;
+  const srcIdx = questions.findIndex(oq => String(qRef(oq)) === String(form.src));
+  if (srcIdx < 0) return `${label}跳转逻辑的源题目不存在`;
+  if (form.action === 'skip_to') {
+    if (!form.target) return `${label}请选择跳转的目标题目`;
+    const tgtIdx = questions.findIndex(oq => String(qRef(oq)) === String(form.target));
+    if (tgtIdx < 0) return `${label}跳转逻辑的目标题目不存在`;
+    if (tgtIdx <= srcIdx) return `${label}跳转目标必须位于触发题目之后`;
+  }
+  return null;
+}
+async function saveJump(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const form = readJumpForm(idx);
+  const err = validateJumpForm(idx, form);
+  if (err) {
+    showJumpMsg(idx, err, true);
+    showMsg(err, 'error');
+    return;
+  }
+  const q = questions[idx];
+  const jl = buildJump(form);
+  const qRef = (oq) => oq.id || oq._tmpId || `tmp_${oq.order}`;
+  const srcQ = questions.find(oq => String(qRef(oq)) === String(form.src));
+  const tgtQ = form.action === 'skip_to'
+    ? questions.find(oq => String(qRef(oq)) === String(form.target))
+    : q;
+  // 已存在题目且引用均为真实题目 id 时，立即持久化本次跳转逻辑
+  const canPersist = !!(q.id && srcQ && srcQ.id && tgtQ && tgtQ.id);
+  const saveBtn = document.getElementById('jumpSave-' + idx);
+  if (canPersist) {
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中...'; }
+    try {
+      const res = await fetch(`${API}/surveys/questions/${q.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jump_logic: jl })
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showJumpMsg(idx, d.message || '保存失败', true);
+        showMsg(d.message || '保存失败', 'error');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存跳转逻辑'; }
+        return;
+      }
+    } catch (e) {
+      showJumpMsg(idx, '网络错误，保存失败', true);
+      showMsg('网络错误，保存失败', 'error');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存跳转逻辑'; }
+      return;
+    }
+  }
+  q.jump_logic = jl;
+  delete q._jumpDraft;
+  q._jumpOpen = true;
+  renderQuestions();
+  showJumpMsg(idx, canPersist ? '保存成功' : '保存成功（保存问卷后生效）');
+  showMsg('保存成功', 'success');
+}
+function onJumpSrcChange(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const src = document.getElementById('jumpSrc-' + idx).value;
+  const q = questions[idx];
+  const draft = Object.assign({}, q._jumpDraft || q.jump_logic || {});
+  if (!src) {
+    q._jumpDraft = {};
+  } else {
+    draft.source_question_id = src;
+    draft.value = '';
+    q._jumpDraft = draft;
+  }
+  // 选择源题目会触发重新渲染；显式记住展开状态，避免条件尚未选择时卡片被收起
+  q._jumpOpen = true;
+  renderQuestions();
+}
+function onJumpActionChange(idx) {
+  if (survey && survey.status !== 'draft') return;
+  updateJump(idx);
+  questions[idx]._jumpOpen = true;
+  renderQuestions();
+}
+function updateJump(idx) {
+  if (survey && survey.status !== 'draft') return;
+  const form = readJumpForm(idx);
+  if (!form) return;
+  const q = questions[idx];
+  if (!form.src) {
+    q._jumpDraft = {};
+    q._jumpOpen = true;
+    markJumpDirty(idx);
+    return;
+  }
+  // 输入变化先写入草稿，只有点击“保存跳转逻辑”后才写入 jump_logic
+  const draft = Object.assign({}, q._jumpDraft || q.jump_logic || {});
+  draft.source_question_id = form.src;
+  if (form.cond) draft.condition = form.cond;
+  if (form.target) draft.target_question_id = form.target;
+  if (form.action) draft.action = form.action;
+  draft.value = form.value;
+  q._jumpDraft = draft;
+  q._jumpOpen = true;
+  markJumpDirty(idx);
+}
+function addQuestion() {
+  if (survey && survey.status !== 'draft') return;
+  const tmpId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const q = { _tmpId: tmpId, title: '新题目', type: 'single_choice', order: questions.length, required: false, options: ['选项1', '选项2'], validation: {}, jump_logic: {} };
+  questions.push(q);
+  questions.forEach((item, i) => item.order = i);
+  renderQuestions();
+}
+function removeQuestion(idx) {
+  if (survey && survey.status !== 'draft') return;
+  questions.splice(idx, 1);
+  questions.forEach((q, i) => q.order = i);
+  renderQuestions();
+}
+function moveQuestion(idx, dir) {
+  if (survey && survey.status !== 'draft') return;
+  const ni = idx + dir;
+  [questions[idx], questions[ni]] = [questions[ni], questions[idx]];
+  questions.forEach((q, i) => q.order = i);
+  renderQuestions();
+}
+function updateQ(idx, key, value) {
+  if (survey && survey.status !== 'draft') return;
+  questions[idx][key] = value;
+  const t = questionTypes.find(t => t.value === value);
+  if (key === 'type' && t) {
+    questions[idx].options = t.needsOptions ? (questions[idx].options || ['选项1', '选项2']) : [];
+    questions[idx].validation = {};
+    delete questions[idx]._validationDraft;
+    delete questions[idx]._validationOpen;
+  }
+  renderQuestions();
+}
+function addOption(qIdx) {
+  if (survey && survey.status !== 'draft') return;
+  questions[qIdx].options.push('新选项');
+  renderQuestions();
+}
+function removeOption(qIdx, oIdx) {
+  if (survey && survey.status !== 'draft') return;
+  questions[qIdx].options.splice(oIdx, 1);
+  renderQuestions();
+}
+function updateOption(qIdx, oIdx, value) {
+  questions[qIdx].options[oIdx] = value;
+}
+document.getElementById('btnAddQ').onclick = addQuestion;
+document.getElementById('btnSave').onclick = async (e) => {
+  e.preventDefault();
+  msg.style.display = 'none';
+  const btn = document.getElementById('btnSave');
+  if (!surveyIdValid) { showMsg('问卷 ID 缺失或无效，请从问卷列表重新进入', 'error'); return; }
+  btn.disabled = true; btn.textContent = '保存中...';
+  const title = document.getElementById('title').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const deadlineInput = document.getElementById('deadline').value;
+  let deadline = null;
+  if (deadlineInput) {
+    const d = new Date(deadlineInput);
+    if (isNaN(d.getTime())) { showMsg('截止日期格式不正确', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+    deadline = d.toISOString();
+  }
+  if (deadline && new Date(deadline) <= new Date()) { showMsg('截止日期必须在当前时间之后', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+  if (!title) { showMsg('问卷标题不能为空', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+  const configError = validateQuestionsConfig();
+  if (configError) { showMsg(configError, 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+  const settings = {
+    allow_anonymous: document.getElementById('allowAnonymous').checked,
+    show_progress: document.getElementById('showProgress').checked,
+    one_per_user: document.getElementById('onePerUser').checked,
+    collect_email: document.getElementById('collectEmail').checked
+  };
+  try {
+    const res1 = await fetch(`${API}/surveys/${surveyId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title, description, settings, deadline })
+    });
+    if (!res1.ok) { const d = await res1.json(); showMsg(d.message || '保存失败', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+    const refToId = {};
+    for (const q of questions) {
+      if (q.id) refToId[q.id] = q.id;
+    }
+    for (const q of questions) {
+      const qid = q.id;
+      const jl = q.jump_logic || {};
+      const body = { title: q.title, type: q.type, order: q.order, required: q.required, options: q.options || [], validation: q.validation || {}, jump_logic: jl.condition ? jl : {} };
+      if (qid) {
+        const res2 = await fetch(`${API}/surveys/questions/${qid}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+        if (!res2.ok) { const d = await res2.json(); showMsg(d.message || '保存题目失败', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+      } else {
+        const res2 = await fetch(`${API}/surveys/${surveyId}/questions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+        const d = await res2.json();
+        if (!res2.ok) { showMsg(d.message || '保存题目失败', 'error'); btn.disabled = false; btn.textContent = '保存修改'; return; }
+        if (d.data && d.data.id) {
+          refToId[`tmp_${q.order}`] = d.data.id;
+          if (q._tmpId) refToId[q._tmpId] = d.data.id;
+          q.id = d.data.id;
+        }
+      }
+    }
+    // 跳转引用统一保存为题目 id（兼容旧的 order 格式）
+    for (const q of questions) {
+      const jl = q.jump_logic || {};
+      if (!jl.condition) continue;
+      let src = jl.source_question_id;
+      let tgt = jl.target_question_id;
+      if (!questions.some(oq => oq.id === src)) {
+        const byOrder = questions.find(oq => String(oq.order) === String(src));
+        if (byOrder && byOrder.id) src = byOrder.id;
+      }
+      if (!questions.some(oq => oq.id === tgt)) {
+        const byOrder = questions.find(oq => String(oq.order) === String(tgt));
+        if (byOrder && byOrder.id) tgt = byOrder.id;
+      }
+      src = refToId[src] || src;
+      tgt = refToId[tgt] || tgt;
+      if (src === jl.source_question_id && tgt === jl.target_question_id) continue;
+      const newJl = { ...jl, source_question_id: src, target_question_id: tgt };
+      const patchRes = await fetch(`${API}/surveys/questions/${q.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ jump_logic: newJl }) });
+      if (!patchRes.ok) {
+        const d = await patchRes.json().catch(() => ({}));
+        showMsg(d.message || '跳转逻辑保存失败', 'error');
+        btn.disabled = false; btn.textContent = '保存修改';
+        return;
+      }
+      q.jump_logic = newJl;
+    }
+    showMsg('保存成功', 'success');
+    loadSurvey();
+  } catch (err) { showMsg('网络错误', 'error'); } finally {
+    btn.disabled = false; btn.textContent = '保存修改';
+  }
+};
+document.getElementById('surveyForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  document.getElementById('btnSave').click();
+});
+document.getElementById('btnPub').onclick = async () => {
+  try {
+    const res = await fetch(`${API}/surveys/${surveyId}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { loadSurvey(); showMsg('发布成功', 'success'); }
+    else { const d = await res.json(); showMsg(d.message || '发布失败', 'error'); }
+  } catch (e) { showMsg('网络错误', 'error'); }
+};
+function escapeHtml(str) { return String(str||'').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+loadSurvey();
+</script>
+</body>
+</html>

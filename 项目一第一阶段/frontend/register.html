@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注册 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .card{background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);width:100%;max-width:400px}
+  h2{color:#1a1a2e;margin-bottom:8px;font-size:24px;text-align:center}
+  p.sub{color:#666;text-align:center;margin-bottom:28px;font-size:14px}
+  .form-group{margin-bottom:18px}
+  label{display:block;margin-bottom:6px;color:#333;font-size:14px;font-weight:500}
+  input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none;transition:border .2s}
+  input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,0.1)}
+  button{width:100%;padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:600;cursor:pointer;transition:background .2s}
+  button:hover{background:#4338ca}
+  button:disabled{opacity:.65;cursor:not-allowed}
+  .switch{text-align:center;margin-top:20px;color:#666;font-size:14px}
+  .switch a{color:#4f46e5;text-decoration:none;font-weight:600}
+  .switch a:hover{text-decoration:underline}
+  #msg{margin-top:16px;padding:10px;border-radius:6px;font-size:13px;display:none}
+  .error{background:#fdecea;color:#b3261e;border:1px solid #f5c6c6}
+  .success{background:#e7f4ea;color:#1e7e34;border:1px solid #c3e6cb}
+  .hint{font-size:12px;color:#999;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>创建账号</h2>
+  <p class="sub">加入我们，开始创建问卷</p>
+  <div id="msg" class="error"></div>
+  <form id="registerForm">
+    <div class="form-group">
+      <label for="username">用户名</label>
+      <input id="username" type="text" placeholder="3-20个字符" required maxlength="20" autocomplete="username">
+      <div class="hint">仅支持字母、数字和下划线</div>
+    </div>
+    <div class="form-group">
+      <label for="password">密码</label>
+      <input id="password" type="password" placeholder="请输入密码" required autocomplete="new-password">
+      <div class="hint">字母和数字的任意组合</div>
+    </div>
+    <div class="form-group">
+      <label for="confirmPassword">确认密码</label>
+      <input id="confirmPassword" type="password" placeholder="再次输入密码" required autocomplete="new-password">
+    </div>
+    <button type="submit">注册</button>
+  </form>
+  <div class="switch">已有账号？<a href="login.html">去登录</a></div>
+</div>
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  // 通过 Live Server 等其他静态服务器或 file:// 打开时，接口仍在 Flask 的 5000 端口
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+const msg = document.getElementById('msg');
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg.style.display = 'none';
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = '注册中...';
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  if (password !== confirm) {
+    showMsg('两次输入的密码不一致', 'error');
+    btn.disabled = false; btn.textContent = '注册';
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/auth/register`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const raw = await res.text();
+    let data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (e) {}
+    if (!data) {
+      showMsg(`接口返回异常（HTTP ${res.status}），当前请求地址：${API}/auth/register。请通过 http://localhost:5000/register.html 访问`, 'error');
+      return;
+    }
+    if (res.ok) {
+      showMsg('注册成功，正在跳转登录...', 'success');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+    } else {
+      showMsg(data.message || `注册失败（HTTP ${res.status}）`, 'error');
+    }
+  } catch (err) {
+    if (err && err.name === 'TypeError') {
+      showMsg(`无法连接后端服务（${API}），请确认已运行 python run.py，且 MongoDB 已启动`, 'error');
+    } else {
+      showMsg(err && err.message ? err.message : '网络错误，请稍后重试', 'error');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '注册';
+  }
+});
+function showMsg(text, type) {
+  msg.textContent = text; msg.className = type === 'error' ? 'error' : 'success';
+  msg.style.display = 'block';
+}
+</script>
+</body>
+</html>

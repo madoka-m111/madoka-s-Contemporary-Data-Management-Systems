@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统计结果 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+  .topbar{background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10}
+  .logo{font-size:18px;font-weight:700;color:#4f46e5}
+  .btn-back{padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;color:#333;cursor:pointer;font-size:14px;text-decoration:none}
+  .btn-back:hover{background:#f9fafb}
+  .container{max-width:1100px;margin:24px auto;padding:0 24px}
+  .page-title{font-size:22px;font-weight:700;margin-bottom:8px}
+  .page-sub{color:#666;margin-bottom:24px;font-size:14px}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+  .stat-card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+  .stat-number{font-size:30px;font-weight:700;color:#4f46e5}
+  .stat-label{font-size:13px;color:#666;margin-top:4px}
+  .chart-card{background:#fff;border-radius:10px;padding:20px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+  .chart-title{font-size:15px;font-weight:600;margin-bottom:14px;color:#333;display:flex;align-items:center;gap:8px}
+  .chart-wrap{position:relative;height:260px;width:100%}
+  .chart-wrap-sm{position:relative;height:200px;width:100%}
+  .table-wrap{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:24px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f9fafb;text-align:left;padding:12px 16px;font-size:13px;color:#666;font-weight:600;border-bottom:1px solid #eee}
+  td{padding:12px 16px;font-size:14px;border-bottom:1px solid #f1f1f1;color:#333}
+  tr:last-child td{border-bottom:none}
+  .empty{text-align:center;padding:60px;color:#999}
+  .btn-export{padding:8px 16px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-left:12px}
+  .btn-export:hover{background:#4338ca}
+  .actions{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .select{padding:8px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:14px}
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+  .text-answers{max-height:300px;overflow-y:auto;border:1px solid #f1f1f1;border-radius:8px;padding:12px;background:#fafafa}
+  .text-item{padding:8px 0;border-bottom:1px solid #eee;font-size:13px;color:#555}
+  .text-item:last-child{border-bottom:none}
+  .meta-row{display:flex;gap:16px;margin-top:12px;font-size:13px;color:#666}
+  .meta-item{display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">问卷系统</div>
+  <a class="btn-back" href="dashboard.html">返回列表</a>
+</div>
+<div class="container">
+  <div class="page-title" id="surveyTitle">统计结果</div>
+  <div class="page-sub" id="surveyDesc"></div>
+  <div class="actions">
+    <select class="select" id="formatSelect">
+      <option value="json">JSON</option>
+      <option value="csv">CSV</option>
+      <option value="xlsx">Excel</option>
+    </select>
+    <button class="btn-export" id="btnExport">导出数据</button>
+  </div>
+  <div id="msg" style="padding:10px;border-radius:6px;font-size:13px;display:none;margin-bottom:16px"></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-number" id="statTotal">0</div><div class="stat-label">总回答数</div></div>
+    <div class="stat-card"><div class="stat-number" id="statRate">0%</div><div class="stat-label">完成率</div></div>
+  </div>
+  <div id="questionsStats"></div>
+  <div id="empty" class="empty" style="display:none"><p>暂无回答数据</p></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = 'login.html'; }
+const urlParams = new URLSearchParams(location.search);
+const surveyId = urlParams.get('id');
+const msg = document.getElementById('msg');
+let charts = [];
+function showMsg(text, type) {
+  msg.textContent = text; msg.className = type === 'error' ? '' : 'success';
+  msg.style.background = type === 'error' ? '#fdecea' : '#e7f4ea';
+  msg.style.color = type === 'error' ? '#b3261e' : '#1e7e34';
+  msg.style.border = type === 'error' ? '1px solid #f5c6c6' : '1px solid #c3e6cb';
+  msg.style.display = 'block';
+}
+function destroyCharts() {
+  charts.forEach(c => c.destroy());
+  charts = [];
+}
+async function load() {
+  try {
+    const sres = await fetch(`${API}/surveys/${surveyId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const sdata = await sres.json();
+    document.getElementById('surveyTitle').textContent = sdata.data.title;
+    document.getElementById('surveyDesc').textContent = sdata.data.description || '';
+    const res = await fetch(`${API}/stats/surveys/${surveyId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { const d = await res.json(); showMsg(d.message || '加载失败', 'error'); return; }
+    const data = await res.json();
+    const stats = data.data;
+    document.getElementById('statTotal').textContent = stats.total_responses;
+    document.getElementById('statRate').textContent = (stats.completion_rate * 100).toFixed(0) + '%';
+    destroyCharts();
+    if (stats.daily_trend && stats.daily_trend.length) renderTrendChart(stats.daily_trend);
+    renderQuestions(stats.question_stats || []);
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+function renderTrendChart(trend) {
+  const ctx = document.createElement('canvas');
+  ctx.id = 'trendCanvas';
+  document.getElementById('questionsStats').insertAdjacentHTML('beforebegin', `
+    <div class="chart-card" id="trendCardWrapper">
+      <div class="chart-title">📈 每日提交趋势</div>
+      <div class="chart-wrap"><canvas id="trendCanvas"></canvas></div>
+    </div>
+  `);
+  const wrapper = document.getElementById('trendCardWrapper');
+  wrapper.insertBefore(ctx, wrapper.querySelector('.chart-wrap'));
+  wrapper.querySelector('#trendCanvas').remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-wrap';
+  wrap.appendChild(ctx);
+  wrapper.appendChild(wrap);
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.date),
+      datasets: [{ label: '提交数', data: trend.map(t => t.count), borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.1)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+  charts.push(chart);
+}
+function renderQuestions(stats) {
+  const container = document.getElementById('questionsStats');
+  const empty = document.getElementById('empty');
+  container.innerHTML = '';
+  if (!stats || stats.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  stats.forEach(qs => {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.innerHTML = `
+      <div class="chart-title">❓ ${escapeHtml(qs.title || qs.question_id)} <span style="font-size:12px;color:#999;font-weight:normal">(${qs.type})</span></div>
+      <div class="meta-row"><span class="meta-item">总回答 <b>${qs.total_answers}</b></span><span class="meta-item">跳过 <b>${qs.skip_count}</b></span></div>
+      <div class="chart-wrap-sm" id="chartWrap-${qs.question_id}"></div>
+    `;
+    container.appendChild(card);
+    renderQuestionChart(qs);
+  });
+}
+function renderQuestionChart(qs) {
+  const wrap = document.getElementById('chartWrap-' + qs.question_id);
+  if (qs.options) {
+    const labels = qs.options.map(o => o.text);
+    const data = qs.options.map(o => o.count);
+    const colors = ['#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316'];
+    const canvas = document.createElement('canvas');
+    wrap.innerHTML = '';
+    wrap.appendChild(canvas);
+    if (qs.type === 'multiple_choice') {
+      new Chart(canvas, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '选择人数', data, backgroundColor: colors.slice(0, labels.length) }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    } else {
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length) }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+  } else if (qs.answers) {
+    wrap.innerHTML = `<div class="text-answers">${qs.answers.slice(0, 50).map(a => `<div class="text-item">• ${escapeHtml(a)}</div>`).join('')}${qs.answers.length > 50 ? `<div class="text-item" style="color:#999">... 共 ${qs.answers.length} 条回答</div>` : ''}</div>`;
+  } else if (qs.avg !== undefined) {
+    wrap.innerHTML = `
+      <div class="grid-2">
+        <div class="stat-card" style="padding:16px"><div class="stat-number">${qs.avg}</div><div class="stat-label">平均值</div></div>
+        <div class="stat-card" style="padding:16px"><div class="stat-number">${qs.min}</div><div class="stat-label">最小值</div></div>
+        <div class="stat-card" style="padding:16px"><div class="stat-number">${qs.max}</div><div class="stat-label">最大值</div></div>
+        <div class="stat-card" style="padding:16px"><div class="stat-number">${qs.median}</div><div class="stat-label">中位数</div></div>
+      </div>
+      <div style="margin-top:14px">${qs.distribution.map(d => `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:2px"><span>${d.range}</span><span>${d.count}</span></div><div class="bar" style="height:8px;background:#eef;border-radius:4px;overflow:hidden"><div style="height:100%;background:#4f46e5;width:${qs.total_answers ? (d.count/qs.total_answers*100) : 0}%"></div></div></div>`).join('')}</div>
+    `;
+  } else if (qs.distribution) {
+    const canvas = document.createElement('canvas');
+    wrap.innerHTML = '';
+    wrap.appendChild(canvas);
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: qs.distribution.map(d => d.range || d.date),
+        datasets: [{ label: '人数', data: qs.distribution.map(d => d.count), backgroundColor: '#4f46e5' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  }
+}
+document.getElementById('btnExport').onclick = async () => {
+  const fmt = document.getElementById('formatSelect').value;
+  try {
+    const res = await fetch(`${API}/stats/surveys/${surveyId}/export?format=${fmt}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { showMsg('导出失败', 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `survey_${surveyId}_export.${fmt === 'xlsx' ? 'xlsx' : fmt}`;
+    a.click();
+  } catch (e) { showMsg('导出失败', 'error'); }
+};
+function escapeHtml(str) { return String(str||'').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+load();
+</script>
+</body>
+</html>
