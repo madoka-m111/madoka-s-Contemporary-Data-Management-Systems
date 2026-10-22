@@ -229,3 +229,4 @@ pytest tests/ -v
 - `docs/API说明.md` - API 接口文档
 - `docs/测试用例.md` - 测试用例说明
 - `docs/AI使用日志.md` - AI 使用过程记录
+- `docs/关键逻辑说明.md` - 关键逻辑详细说明
