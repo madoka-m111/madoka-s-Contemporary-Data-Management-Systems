@@ -93,8 +93,7 @@ survey_system/
     ├── 数据库设计.md                   # MongoDB Schema设计文档
     ├── API说明.md                      # 接口文档
     ├── 测试用例.md                     # 测试用例文档
-    ├── AI使用日志.md                   # AI使用过程记录
-    └── 项目完成报告.md                 # 项目完成报告
+    └── AI使用日志.md                   # AI使用过程记录
 ```
 
 ## 技术栈
@@ -230,5 +229,3 @@ pytest tests/ -v
 - `docs/API说明.md` - API 接口文档
 - `docs/测试用例.md` - 测试用例说明
 - `docs/AI使用日志.md` - AI 使用过程记录
-- `docs/项目完成报告.md` - 实验报告与项目完成报告
-- `docs/项目完成报告.docx` - 实验报告 Word 排版版（由 Markdown 转换生成）
