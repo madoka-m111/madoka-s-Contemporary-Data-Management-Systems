@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>题目库 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+  .topbar{background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10}
+  .logo{font-size:18px;font-weight:700;color:#4f46e5}
+  .nav{display:flex;align-items:center;gap:12px}
+  .btn-back{padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;color:#333;cursor:pointer;font-size:14px;text-decoration:none}
+  .btn-back:hover{background:#f9fafb}
+  .container{display:flex;max-width:1240px;margin:24px auto;padding:0 24px;width:100%;gap:24px}
+  .sidebar{width:250px;flex-shrink:0}
+  .main{flex:1;min-width:0}
+  .card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:18px}
+  .page-title{font-size:22px;font-weight:700;margin-bottom:6px}
+  .page-sub{color:#666;font-size:14px;margin-bottom:18px}
+  .bank-title{font-size:14px;font-weight:700;margin-bottom:12px;color:#333}
+  .bank-item{padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;margin-bottom:6px;border:1px solid transparent}
+  .bank-item:hover{background:#f7f7ff}
+  .bank-item.active{background:#f0f1ff;border-color:#c7c9ff;color:#4f46e5;font-weight:600}
+  .bank-count{float:right;color:#999;font-size:12px;font-weight:400}
+  .btn{padding:8px 14px;border:none;border-radius:6px;font-size:13px;cursor:pointer;background:#4f46e5;color:#fff;font-weight:600}
+  .btn:hover{background:#4338ca}
+  .btn-light{background:#fff;color:#4f46e5;border:1px solid #c7c9ff}
+  .btn-light:hover{background:#f0f1ff}
+  .btn-sm{padding:5px 9px;font-size:12px;font-weight:500}
+  .btn-danger{background:#fff;color:#b3261e;border:1px solid #f5c6c6}
+  .btn-danger:hover{background:#fdecea}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .toolbar input,.toolbar select{padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;background:#fff}
+  .toolbar input{flex:1;min-width:170px}
+  .q-card{background:#fff;border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid #f0f0f5}
+  .q-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .q-title{font-size:16px;font-weight:600;line-height:1.4}
+  .q-meta{color:#888;font-size:12px;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;background:#f0f1ff;color:#4f46e5;font-size:11px}
+  .tag-green{background:#e7f4ea;color:#1e7e34}
+  .tag-orange{background:#fff4e6;color:#b27a00}
+  .tag-gray{background:#f1f1f1;color:#666}
+  .q-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+  .empty{text-align:center;padding:48px;color:#999;background:#fff;border-radius:10px}
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+  .modal.show{display:flex}
+  .modal-box{background:#fff;border-radius:12px;width:min(720px,100%);max-height:88vh;overflow:auto;padding:22px}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .modal-title{font-size:18px;font-weight:700}
+  .close{border:none;background:none;font-size:24px;color:#999;cursor:pointer;line-height:1}
+  .form-group{margin-bottom:14px}
+  label{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#333}
+  input,textarea,select{width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none}
+  textarea{min-height:70px;resize:vertical}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .collapse-btn{background:none;border:none;color:#4f46e5;font-size:13px;cursor:pointer;padding:4px 0}
+  .collapse-btn:hover{text-decoration:underline}
+  .jump-card{border:1px solid #eef;border-radius:8px;padding:14px;margin-top:14px;background:#fafbff;display:none}
+  .jump-card.show{display:block}
+  .jump-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .jump-row input{flex:2;width:auto;min-width:120px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+  .jump-row input[type=checkbox]{flex:0 0 auto;width:auto;min-width:0}
+  .jump-del{background:#fee2e2;color:#b3261e;border:none;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:12px}
+  .jump-del:hover{background:#fecaca}
+  .jump-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .jump-save-msg{display:inline-block;font-size:12px;font-weight:600;min-height:16px}
+  .jump-hint{font-size:12px;color:#999;margin-top:6px}
+  .version-item{border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:9px}
+  .version-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .version-note{font-size:12px;color:#888;margin-top:6px;line-height:1.6}
+  .stat-bar{height:8px;background:#f0f1ff;border-radius:5px;overflow:hidden;margin-top:4px}
+  .stat-bar span{display:block;height:100%;background:#4f46e5;border-radius:5px}
+  .stat-row{margin-bottom:8px;font-size:13px}
+  .muted{color:#888;font-size:12px}
+  .error-text{color:#b3261e;font-size:12px;margin-top:5px}
+  @media (max-width:760px){.container{flex-direction:column}.sidebar{width:100%}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">问卷系统 · 题目库</div>
+  <div class="nav">
+    <a class="btn-back" href="dashboard.html">返回问卷列表</a>
+  </div>
+</div>
+<div class="container">
+  <aside class="sidebar">
+    <div class="card">
+      <div class="bank-title">我的题库</div>
+      <div id="bankList"></div>
+      <button class="btn btn-light btn-sm" id="btnNewBank" style="width:100%;margin-top:8px">+ 新建题库</button>
+    </div>
+    <div class="card">
+      <div class="bank-title">使用说明</div>
+      <div class="muted" style="line-height:1.8">
+        · 题库里的题目可以被多个问卷重复使用<br>
+        · 修改题目会生成新版本，旧问卷不受影响<br>
+        · 共享题可以被其他用户选用，但只有作者能改原题<br>
+        · 共享题在“全部可用/共享给我的”中查看，不会自动进入你的题库
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div class="page-title">题目库</div>
+        <div class="page-sub" id="pageSub">保存常用题目，创建问卷时直接选用</div>
+      </div>
+      <button class="btn" id="btnNewQuestion">+ 新建题目</button>
+    </div>
+    <div class="toolbar">
+      <input id="keyword" placeholder="搜索题目内容..." onkeydown="if(event.key==='Enter') loadQuestions()">
+      <select id="scope" onchange="onScopeChange()">
+        <option value="bank" disabled>当前题库</option>
+        <option value="all">全部可用</option>
+        <option value="mine">我创建的</option>
+        <option value="shared">共享给我的</option>
+      </select>
+      <button class="btn btn-light" onclick="loadQuestions()">刷新</button>
+    </div>
+    <div id="msg" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:14px"></div>
+    <div id="questionList"></div>
+  </main>
+</div>
+<div class="modal" id="modal">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = 'login.html'; }
+const state = { banks: [], currentBankId: null, items: [], editing: null, validationDraft: {} };
+
+function showMsg(text, type = 'success') {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'error' ? '#fdecea' : '#e7f4ea';
+  el.style.color = type === 'error' ? '#b3261e' : '#1e7e34';
+  el.style.border = type === 'error' ? '1px solid #f5c6c6' : '1px solid #c3e6cb';
+  setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+function typeLabel(type) {
+  const map = {
+    single_choice: '单选题', multiple_choice: '多选题', text: '文本填空题',
+    textarea: '多行文本题', number: '数字填空题', rating: '评分题',
+    dropdown: '下拉选择题', date: '日期题', file: '文件上传题'
+  };
+  return map[type] || type;
+}
+function validationSupported(type) {
+  return ['multiple_choice', 'text', 'textarea', 'number'].includes(type);
+}
+function validationSummary(type, v) {
+  v = v || {};
+  const parts = [];
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  if (type === 'multiple_choice') {
+    if (has('exact_select')) parts.push(`必须选择 ${v.exact_select} 项`);
+    else {
+      if (has('min_select')) parts.push(`最少选择 ${v.min_select} 项`);
+      if (has('max_select')) parts.push(`最多选择 ${v.max_select} 项`);
+    }
+  } else if (type === 'text' || type === 'textarea') {
+    if (has('min_length')) parts.push(`最少 ${v.min_length} 字`);
+    if (has('max_length')) parts.push(`最多 ${v.max_length} 字`);
+  } else if (type === 'number') {
+    if (has('min')) parts.push(`最小值 ${v.min}`);
+    if (has('max')) parts.push(`最大值 ${v.max}`);
+    if (v.integer_only) parts.push('仅允许整数');
+  }
+  return parts.join('，');
+}
+function validationFieldsHtml(type, v) {
+  const numVal = key => (v[key] === undefined || v[key] === null) ? '' : v[key];
+  const numInput = (id, key, placeholder, attrs = '') => `<input type="number" id="${id}" ${attrs} value="${numVal(key)}" placeholder="${placeholder}" oninput="updateValidationPreview()">`;
+  const row = (label, body) => `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="margin:0;font-size:12px;font-weight:400;color:#666;white-space:nowrap">${label}</label>${body}</div>`;
+  if (type === 'multiple_choice') {
+    return row('最少选择数', numInput('limitMinSelect', 'min_select', '如 2', 'min="1" step="1"'))
+      + row('最多选择数', numInput('limitMaxSelect', 'max_select', '如 3', 'min="1" step="1"'))
+      + row('必须选择数', numInput('limitExactSelect', 'exact_select', '如 2', 'min="1" step="1"'));
+  }
+  if (type === 'text' || type === 'textarea') {
+    return row('最少字数', numInput('limitMinLength', 'min_length', '如 10', 'min="0" step="1"'))
+      + row('最多字数', numInput('limitMaxLength', 'max_length', '如 500', 'min="1" step="1"'));
+  }
+  if (type === 'number') {
+    return row('最小值', numInput('limitMin', 'min', '如 0', 'step="any"'))
+      + row('最大值', numInput('limitMax', 'max', '如 100', 'step="any"'))
+      + `<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:13px;font-weight:400;color:#666"><input type="checkbox" id="limitInteger" style="width:auto" ${v.integer_only ? 'checked' : ''} onchange="updateValidationPreview()"> 仅允许整数</label>`;
+  }
+  return '';
+}
+function validationHint(type) {
+  if (type === 'multiple_choice') return '留空表示不限制；“必须选择数”与最少/最多选择数互斥';
+  if (type === 'text' || type === 'textarea') return '留空表示不限制；字数按字符数统计';
+  if (type === 'number') return '留空表示不限制；勾选“仅允许整数”后只能输入整数';
+  return '';
+}
+function validateValidationRules(type, options, v) {
+  v = v || {};
+  const has = key => v[key] !== undefined && v[key] !== null && v[key] !== '';
+  if (!validationSupported(type)) return null;
+  if (type === 'multiple_choice') {
+    const mn = Number(v.min_select);
+    const mx = Number(v.max_select);
+    const exact = Number(v.exact_select);
+    const optCount = (options || []).length;
+    if (has('min_select') && (!Number.isInteger(mn) || mn < 1)) return '最少选择数必须是不小于 1 的整数';
+    if (has('max_select') && (!Number.isInteger(mx) || mx < 1)) return '最多选择数必须是不小于 1 的整数';
+    if (has('exact_select') && (!Number.isInteger(exact) || exact < 1)) return '必须选择数必须是不小于 1 的整数';
+    if (has('exact_select') && (has('min_select') || has('max_select'))) return '“必须选择数”不能与最少/最多选择数同时设置';
+    if (has('min_select') && has('max_select') && mn > mx) return '最少选择数不能大于最多选择数';
+    if (has('min_select') && optCount && mn > optCount) return '最少选择数不能超过选项总数';
+    if (has('max_select') && optCount && mx > optCount) return '最多选择数不能超过选项总数';
+    if (has('exact_select') && optCount && exact > optCount) return '必须选择数不能超过选项总数';
+  } else if (type === 'text' || type === 'textarea') {
+    const mn = Number(v.min_length);
+    const mx = Number(v.max_length);
+    if (has('min_length') && (!Number.isInteger(mn) || mn < 0)) return '最少字数必须是不小于 0 的整数';
+    if (has('max_length') && (!Number.isInteger(mx) || mx < 1)) return '最多字数必须是不小于 1 的整数';
+    if (has('min_length') && has('max_length') && mn > mx) return '最少字数不能大于最多字数';
+  } else if (type === 'number') {
+    if (has('min') && !Number.isFinite(Number(v.min))) return '最小值必须是有效数字';
+    if (has('max') && !Number.isFinite(Number(v.max))) return '最大值必须是有效数字';
+    if (has('min') && has('max') && Number(v.min) > Number(v.max)) return '最小值不能大于最大值';
+  }
+  return null;
+}
+function renderValidationCard() {
+  const wrap = document.getElementById('validationWrap');
+  if (!wrap) return;
+  const type = document.getElementById('qType').value;
+  if (!validationSupported(type)) {
+    wrap.innerHTML = '';
+    return;
+  }
+  const v = state.validationDraft || {};
+  const summary = validationSummary(type, v);
+  wrap.innerHTML = `
+    <div class="jump-card show" id="limitCard">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600;color:#4f46e5">⚙ 限制条件</span>
+        <span style="margin-left:auto;font-size:12px;color:#999">随题目一起保存</span>
+      </div>
+      <div class="jump-preview" id="limitPreview" style="margin-bottom:12px;padding:10px;background:#f0f1ff;border-radius:6px;font-size:13px;color:#1a1a2e">${summary ? `限制：${summary}` : '暂未设置限制条件'}</div>
+      <div class="jump-row" style="display:flex;flex-direction:column;gap:10px">${validationFieldsHtml(type, v)}</div>
+      <div class="jump-actions" style="margin-top:10px">
+        <button type="button" class="jump-del" onclick="clearValidationDraft()">× 清除限制条件</button>
+      </div>
+      <div class="jump-hint">${validationHint(type)}</div>
+    </div>`;
+}
+function readValidationDraft() {
+  const type = document.getElementById('qType').value;
+  const rules = {};
+  const readNum = (key, id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = String(el.value).trim();
+    if (text === '') return;
+    const num = Number(text);
+    if (!Number.isNaN(num)) rules[key] = num;
+  };
+  if (type === 'multiple_choice') {
+    readNum('min_select', 'limitMinSelect');
+    readNum('max_select', 'limitMaxSelect');
+    readNum('exact_select', 'limitExactSelect');
+  } else if (type === 'text' || type === 'textarea') {
+    readNum('min_length', 'limitMinLength');
+    readNum('max_length', 'limitMaxLength');
+  } else if (type === 'number') {
+    readNum('min', 'limitMin');
+    readNum('max', 'limitMax');
+    const cb = document.getElementById('limitInteger');
+    if (cb && cb.checked) rules.integer_only = true;
+  }
+  state.validationDraft = rules;
+  return rules;
+}
+function updateValidationPreview() {
+  const type = document.getElementById('qType').value;
+  const rules = readValidationDraft();
+  const preview = document.getElementById('limitPreview');
+  if (preview) {
+    const summary = validationSummary(type, rules);
+    preview.textContent = summary ? `限制：${summary}` : '暂未设置限制条件';
+  }
+}
+function clearValidationDraft() {
+  state.validationDraft = {};
+  renderValidationCard();
+}
+function onQuestionTypeChange() {
+  state.validationDraft = {};
+  renderValidationCard();
+}
+function showFormError(text) {
+  const el = document.getElementById('qFormError');
+  if (el) el.textContent = text;
+  showMsg(text, 'error');
+}
+async function api(path, options = {}) {
+  const headers = Object.assign({ Authorization: `Bearer ${token}` }, options.headers || {});
+  if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${API}${path}`, Object.assign({}, options, { headers }));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || `请求失败（HTTP ${res.status}）`);
+  return data.data;
+}
+
+async function loadBanks() {
+  try {
+    state.banks = await api('/question-bank/banks');
+    if (!state.currentBankId) {
+      const savedBank = localStorage.getItem('question_bank_current');
+      const found = state.banks.find(b => b.id === savedBank);
+      state.currentBankId = found ? found.id : null;
+    }
+    if (state.currentBankId && !state.banks.some(b => b.id === state.currentBankId)) {
+      state.currentBankId = null;
+    }
+    const scopeEl = document.getElementById('scope');
+    if (scopeEl) {
+      scopeEl.value = state.currentBankId ? 'bank' : (scopeEl.value === 'bank' ? 'all' : scopeEl.value);
+    }
+    renderBanks();
+    await loadQuestions();
+  } catch (err) {
+    showMsg(err.message, 'error');
+  }
+}
+function renderBanks() {
+  const box = document.getElementById('bankList');
+  const allItem = `<div class="bank-item ${state.currentBankId ? '' : 'active'}" onclick="selectBank('')">全部可用题目 <span class="bank-count">↗</span></div>`;
+  box.innerHTML = allItem + (state.banks.map(b => `
+    <div class="bank-item ${b.id === state.currentBankId ? 'active' : ''}" onclick="selectBank('${b.id}')">
+      ${escapeHtml(b.name)}${b.is_default ? ' <span class="tag tag-green">默认</span>' : ''}
+      <span class="bank-count">${b.question_count}</span>
+    </div>`).join('') || '');
+}
+function selectBank(id) {
+  state.currentBankId = id || null;
+  const scopeEl = document.getElementById('scope');
+  if (scopeEl) scopeEl.value = state.currentBankId ? 'bank' : 'all';
+  if (state.currentBankId) localStorage.setItem('question_bank_current', state.currentBankId);
+  else localStorage.removeItem('question_bank_current');
+  renderBanks();
+  loadQuestions();
+}
+function onScopeChange() {
+  // 题库视图和全局范围不能同时生效，切换范围时退出当前题库，避免筛选被忽略。
+  if (state.currentBankId) {
+    state.currentBankId = null;
+    localStorage.removeItem('question_bank_current');
+    renderBanks();
+  }
+  loadQuestions();
+}
+async function loadQuestions() {
+  const key = (document.getElementById('keyword').value || '').trim();
+  const scope = document.getElementById('scope').value;
+  try {
+    let data;
+    if (state.currentBankId) {
+      data = await api(`/question-bank/banks/${state.currentBankId}/questions`);
+      document.getElementById('pageSub').textContent = `当前题库：${(state.banks.find(b => b.id === state.currentBankId) || {}).name || ''}`;
+    } else {
+      data = await api(`/question-bank/questions?scope=${encodeURIComponent(scope)}&keyword=${encodeURIComponent(key)}&latest_only=true`);
+      const subTitles = {
+        all: '全部可用题目（含我创建的、共享给我的和公开题目）',
+        mine: '我创建的题目',
+        shared: '其他用户共享给我的题目（不会自动加入我的题库）',
+      };
+      document.getElementById('pageSub').textContent = subTitles[scope] || '保存常用题目，创建问卷时直接选用';
+    }
+    state.items = data.items || [];
+    if (key) {
+      const lower = key.toLowerCase();
+      state.items = state.items.filter(item => (item.title || '').toLowerCase().includes(lower));
+    }
+    renderQuestions();
+  } catch (err) {
+    showMsg(err.message, 'error');
+  }
+}
+function emptyQuestionsHtml() {
+  const scope = document.getElementById('scope').value;
+  if (state.currentBankId) {
+    return `<div class="empty">当前题库还没有题目<br><br>
+      <button class="btn" onclick="openCreate()">新建第一道题</button><br><br>
+      <span class="muted">也可以点击左侧“全部可用题目”，把已共享给你的题加入当前题库。</span></div>`;
+  }
+  if (scope === 'shared') {
+    return `<div class="empty">还没有共享给你的题目<br><br>
+      <span class="muted" style="line-height:1.8">共享是按“单道题目”共享的，不会共享整个题库。<br>
+      请让题目作者在题目上点击“共享”，并输入你的完整用户名（区分大小写）。</span></div>`;
+  }
+  if (scope === 'mine') {
+    return `<div class="empty">你还没有创建题目<br><br><button class="btn" onclick="openCreate()">新建第一道题</button></div>`;
+  }
+  return `<div class="empty">题目库里还没有题目<br><br><button class="btn" onclick="openCreate()">新建第一道题</button></div>`;
+}
+function renderQuestions() {
+  const box = document.getElementById('questionList');
+  if (!state.items.length) {
+    box.innerHTML = emptyQuestionsHtml();
+    return;
+  }
+  box.innerHTML = state.items.map(item => {
+    const shared = !item.can_edit;
+    const limitSummary = validationSupported(item.type) ? validationSummary(item.type, item.validation || {}) : '';
+    const visibleTags = [
+      `<span class="tag">v${item.version}/${item.version_count}</span>`,
+      `<span class="tag ${shared ? 'tag-orange' : 'tag-green'}">${shared ? '共享题' : '我创建的'}</span>`,
+      item.is_public ? '<span class="tag tag-orange">公开</span>' : '',
+      limitSummary ? `<span class="tag tag-gray">限制：${escapeHtml(limitSummary)}</span>` : ''
+    ].join(' ');
+    return `<div class="q-card">
+      <div class="q-head">
+        <div>
+          <div class="q-title">${escapeHtml(item.title)}</div>
+          <div class="q-meta">
+            <span>${escapeHtml(typeLabel(item.type))}</span>
+            <span>作者：${escapeHtml(item.owner_name || '未知')}</span>
+            <span>被 ${item.usage_count || 0} 份问卷使用</span>
+            ${item.is_latest ? '<span>最新版本</span>' : '<span>历史版本</span>'}
+          </div>
+          <div style="margin-top:8px">${visibleTags}</div>
+        </div>
+      </div>
+      <div class="q-actions">
+        <button class="btn btn-light btn-sm" onclick="openVersions('${item.family_id}')">版本历史</button>
+        <button class="btn btn-light btn-sm" onclick="openUsage('${item.family_id}')">使用情况</button>
+        <button class="btn btn-light btn-sm" onclick="openStats('${item.family_id}')">跨问卷统计</button>
+        <button class="btn btn-light btn-sm" onclick="addToCurrentBank('${item.family_id}')">加入当前题库</button>
+        ${state.currentBankId ? `<button class="btn btn-danger btn-sm" onclick="removeFromCurrentBank('${item.family_id}')">移出题库</button>` : ''}
+        ${item.can_edit
+          ? `<button class="btn btn-light btn-sm" onclick="openCreateById('${item.id}')">编辑（新版本）</button>
+             <button class="btn btn-light btn-sm" onclick="shareQuestion('${item.family_id}')">共享</button>`
+          : `<button class="btn btn-light btn-sm" onclick="forkQuestion('${item.id}')">创建自己的副本</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+function showModal(html) {
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+function openCreateById(id) {
+  openCreate(state.items.find(item => item.id === id) || null);
+}
+function openCreate(item = null) {
+  state.editing = item || null;
+  const isEdit = !!item;
+  state.validationDraft = item && validationSupported(item.type) ? Object.assign({}, item.validation || {}) : {};
+  const optionsText = ((item && item.options) || []).join('\n');
+  const bankOptions = state.banks.map(b => `<option value="${b.id}" ${b.id === state.currentBankId ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('');
+  showModal(`
+    <div class="modal-head">
+      <div class="modal-title">${isEdit ? `编辑题目（将生成 v${(item.version || 1) + 1}）` : '新建题目'}</div>
+      <button class="close" onclick="closeModal()">×</button>
+    </div>
+    <form id="questionForm" onsubmit="saveQuestion(event)">
+      <div class="form-group">
+        <label>题目内容 *</label>
+        <input id="qTitle" required value="${escapeHtml(item ? item.title : '')}" placeholder="例如：你的年龄">
+      </div>
+      <div class="form-group">
+        <label>题目类型 *</label>
+        <select id="qType" onchange="onQuestionTypeChange()">
+          ${['single_choice','multiple_choice','text','textarea','number','rating','dropdown','date','file'].map(t => `<option value="${t}" ${item && item.type === t ? 'selected' : ''}>${typeLabel(t)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>选项（每行一个，选择题使用）</label>
+        <textarea id="qOptions" placeholder="选项1&#10;选项2">${escapeHtml(optionsText)}</textarea>
+      </div>
+      <div id="validationWrap"></div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="qRequired" style="width:auto" ${item && item.required ? 'checked' : ''}>
+        <label for="qRequired" style="margin:0;font-weight:400">默认设为必填题</label>
+      </div>
+      ${isEdit ? '' : `<div class="form-group"><label>保存到题库</label><select id="qBank">${bankOptions || '<option value="">默认题库</option>'}</select></div>`}
+      <div class="form-group">
+        <label>修改说明（可选）</label>
+        <input id="qNote" placeholder="例如：细化年龄分段" value="${isEdit ? '基于当前版本修改' : '创建题目'}">
+      </div>
+      <div id="qFormError" class="error-text"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-light" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn">${isEdit ? '创建新版本' : '保存到题库'}</button>
+      </div>
+    </form>
+  `);
+  renderValidationCard();
+}
+async function saveQuestion(event) {
+  event.preventDefault();
+  const title = document.getElementById('qTitle').value.trim();
+  const type = document.getElementById('qType').value;
+  const options = document.getElementById('qOptions').value.split('\n').map(x => x.trim()).filter(Boolean);
+  const required = document.getElementById('qRequired').checked;
+  const changeNote = document.getElementById('qNote').value.trim();
+  if (!title) { showFormError('题目内容不能为空'); return; }
+  if (['single_choice','multiple_choice','dropdown'].includes(type) && options.length < 2) {
+    showFormError('选择题至少需要两个选项');
+    return;
+  }
+  const validation = validationSupported(type) ? readValidationDraft() : {};
+  const validationError = validateValidationRules(type, options, validation);
+  if (validationError) { showFormError(validationError); return; }
+  const editing = state.editing;
+  const payload = {
+    title, type, required,
+    options: ['single_choice','multiple_choice','dropdown'].includes(type) ? options : [],
+    validation,
+    change_note: changeNote,
+  };
+  if (editing) {
+    payload.jump_logic = editing.jump_logic || {};
+  }
+  const bankSelect = document.getElementById('qBank');
+  if (bankSelect && bankSelect.value) payload.bank_id = bankSelect.value;
+  try {
+    if (editing) {
+      await api(`/question-bank/questions/${editing.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      showMsg('新版本已创建，旧问卷中的题目不受影响');
+    } else {
+      await api('/question-bank/questions', { method: 'POST', body: JSON.stringify(payload) });
+      showMsg('题目已保存到题库');
+    }
+    closeModal();
+    await loadBanks();
+  } catch (err) {
+    showMsg(err.message, 'error');
+  }
+}
+
+
+async function openVersions(familyId) {
+  try {
+    const data = await api(`/question-bank/families/${familyId}/history`);
+    const byId = {};
+    (data.items || []).forEach(v => { byId[v.id] = v; });
+    const items = (data.items || []).map(v => {
+      const parent = byId[v.parent_version_id];
+      const restored = byId[v.restored_from_version_id];
+      return `<div class="version-item">
+        <div class="version-head">
+          <div><strong>v${v.version}</strong> ${escapeHtml(v.title)} ${v.is_current ? '<span class="tag tag-green">当前最新</span>' : ''}</div>
+          ${data.family.can_edit && !v.is_current ? `<button class="btn btn-light btn-sm" onclick="restoreVersion('${familyId}', '${v.id}')">恢复此版本</button>` : ''}
+        </div>
+        <div class="version-note">
+          类型：${escapeHtml(typeLabel(v.type))}；创建者：${escapeHtml(v.created_by || '')}<br>
+          ${parent ? `由 v${parent.version} 修改而来` : '初始版本'}
+          ${restored ? `；恢复自 v${restored.version}` : ''}<br>
+          说明：${escapeHtml(v.change_note || '无')}；时间：${v.created_at ? new Date(v.created_at).toLocaleString('zh-CN') : ''}
+        </div>
+      </div>`;
+    }).join('');
+    showModal(`
+      <div class="modal-head"><div class="modal-title">版本历史 · ${escapeHtml(data.family.title)}</div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="muted" style="margin-bottom:12px">共 ${data.family.version_count} 个版本；恢复旧版本会生成一个新版本，不会删除任何历史。</div>
+      ${items || '<div class="empty">暂无版本</div>'}
+    `);
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function restoreVersion(familyId, versionId) {
+  if (!confirm('确定把该版本恢复为最新版本吗？系统会创建一个新版本，旧版本仍保留。')) return;
+  try {
+    await api(`/question-bank/families/${familyId}/restore`, {
+      method: 'POST', body: JSON.stringify({ version_id: versionId }),
+    });
+    showMsg('已恢复为新版本');
+    closeModal();
+    await loadQuestions();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function openUsage(familyId) {
+  try {
+    const data = await api(`/question-bank/families/${familyId}/usage`);
+    const rows = (data.items || []).map(item => `
+      <div class="version-item">
+        <div class="version-head">
+          <div><strong>${escapeHtml(item.survey_title)}</strong> <span class="tag tag-gray">${escapeHtml(item.survey_status)}</span></div>
+          <div>
+            <a class="btn btn-light btn-sm" href="edit.html?id=${item.survey_id}">打开问卷</a>
+            <a class="btn btn-light btn-sm" href="stats.html?id=${item.survey_id}">查看统计</a>
+          </div>
+        </div>
+        <div class="version-note">使用版本：v${item.bank_version || '?'}；该问卷已回答：${item.response_count || 0} 份；${item.is_mine ? '我创建的问卷' : '其他用户的问卷'}</div>
+      </div>`).join('');
+    showModal(`
+      <div class="modal-head"><div class="modal-title">使用情况 · ${escapeHtml(data.family.title)}</div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="muted" style="margin-bottom:12px">共被 ${data.total} 份问卷使用。已发布问卷会固定使用当时的题目快照。</div>
+      ${rows || '<div class="empty">还没有问卷使用这道题</div>'}
+    `);
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+
+
+function renderStatsBlock(stats) {
+  if (!stats) return '<div class="muted">暂无统计</div>';
+  if (stats.mixed_types && Array.isArray(stats.by_type)) {
+    return '<div class="muted" style="margin-bottom:8px">该题的不同版本使用了不同题型，已按题型分别统计：</div>'
+      + stats.by_type.map(item => `<div style="margin-bottom:12px"><strong>${escapeHtml(typeLabel(item.type))}</strong>${renderStatsBlock(item)}</div>`).join('');
+  }
+  if (Array.isArray(stats.options) && stats.options.length) {
+    return stats.options.map(o => {
+      const pct = Math.max(0, Math.min(100, Number(o.percentage) || 0));
+      return `<div class="stat-row"><div style="display:flex;justify-content:space-between"><span>${escapeHtml(o.text)}</span><span>${o.count} 人 · ${o.percentage}%</span></div><div class="stat-bar"><span style="width:${pct}%"></span></div></div>`;
+    }).join('');
+  }
+  if (Array.isArray(stats.answers)) {
+    if (!stats.answers.length) return '<div class="muted">暂无回答</div>';
+    return `<div class="muted">共 ${stats.answers.length} 条回答，示例：</div><div style="margin-top:6px;line-height:1.8">${stats.answers.slice(0, 10).map(a => `· ${escapeHtml(a)}`).join('<br>')}</div>`;
+  }
+  if (stats.avg !== undefined) {
+    return `<div class="stat-row">平均值：${stats.avg}；最小值：${stats.min}；最大值：${stats.max}；中位数：${stats.median}</div>`
+      + (stats.distribution || []).map(d => `<div class="stat-row">${escapeHtml(d.range)}：${d.count}</div>`).join('');
+  }
+  if (Array.isArray(stats.distribution) && stats.distribution.length) {
+    return stats.distribution.map(d => `<div class="stat-row">${escapeHtml(d.date || '')}：${d.count}</div>`).join('');
+  }
+  return '<div class="muted">暂无可展示的统计</div>';
+}
+async function openStats(familyId) {
+  try {
+    const data = await api(`/question-bank/families/${familyId}/stats`);
+    const versionBlocks = (data.versions || []).map(v => `
+      <div class="version-item">
+        <div class="version-head"><div><strong>v${v.version}</strong> ${escapeHtml(v.title)}</div><span class="tag">${v.usage_count} 份问卷 / ${v.total_answers} 条回答</span></div>
+        <div style="margin-top:8px">${renderStatsBlock(v.stats)}</div>
+      </div>`).join('');
+    const surveyRows = (data.per_survey || []).map(item => `
+      <div class="version-item">
+        <div class="version-head"><div>${escapeHtml(item.survey_title)} <span class="tag tag-gray">v${item.version || '?'}</span></div><span class="muted">${item.total_answers} 条回答</span></div>
+        <div style="margin-top:8px">${renderStatsBlock(item.stats)}</div>
+      </div>`).join('');
+    showModal(`
+      <div class="modal-head"><div class="modal-title">跨问卷统计 · ${escapeHtml(data.family.title)}</div><button class="close" onclick="closeModal()">×</button></div>
+      <div class="muted" style="line-height:1.8;margin-bottom:12px">
+        ${data.total_surveys} 份问卷使用；共 ${data.total_responses} 份已提交答卷；${data.total_answers} 条有效回答。
+      </div>
+      <div class="card" style="box-shadow:none;border:1px solid #eee">
+        <div class="bank-title">全部版本汇总</div>
+        ${renderStatsBlock(data.aggregate)}
+      </div>
+      <div class="bank-title" style="margin-top:16px">按版本统计</div>
+      ${versionBlocks || '<div class="muted">暂无版本使用记录</div>'}
+      <div class="bank-title" style="margin-top:16px">按问卷统计</div>
+      ${surveyRows || '<div class="muted">暂无问卷使用记录</div>'}
+    `);
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function shareQuestion(familyId) {
+  const username = prompt('请输入要共享给的用户名（共享后对方可选用该题，但不能修改原题）：');
+  if (!username) return;
+  try {
+    await api(`/question-bank/families/${familyId}/share`, {
+      method: 'POST', body: JSON.stringify({ username: username.trim() }),
+    });
+    showMsg(`已共享给 ${username.trim()}。对方可在“全部可用”或“共享给我的”中查看；共享题不会自动加入对方题库。`);
+    await loadQuestions();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function forkQuestion(versionId) {
+  const title = prompt('创建自己的副本，可修改题目名称：', '');
+  if (title === null) return;
+  try {
+    const payload = title.trim() ? { title: title.trim() } : {};
+    await api(`/question-bank/questions/${versionId}/fork`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    showMsg('已创建自己的题目副本并加入默认题库');
+    await loadBanks();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function addToCurrentBank(familyId) {
+  let bankId = state.currentBankId;
+  if (!bankId) {
+    const defaultBank = state.banks.find(b => b.is_default) || state.banks[0];
+    bankId = defaultBank && defaultBank.id;
+  }
+  if (!bankId) { showMsg('请先创建题库', 'error'); return; }
+  try {
+    await api(`/question-bank/banks/${bankId}/questions`, {
+      method: 'POST', body: JSON.stringify({ family_id: familyId }),
+    });
+    showMsg('已加入题库');
+    await loadBanks();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function removeFromCurrentBank(familyId) {
+  if (!state.currentBankId) return;
+  if (!confirm('确定把该题移出当前题库吗？不会删除题目本身。')) return;
+  try {
+    await api(`/question-bank/banks/${state.currentBankId}/questions/${familyId}`, { method: 'DELETE' });
+    showMsg('已从当前题库移除');
+    await loadBanks();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+async function createBank() {
+  const name = prompt('请输入新题库名称：', '');
+  if (!name || !name.trim()) return;
+  const description = prompt('题库说明（可选）：', '') || '';
+  try {
+    await api('/question-bank/banks', {
+      method: 'POST', body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+    });
+    showMsg('题库创建成功');
+    await loadBanks();
+  } catch (err) { showMsg(err.message, 'error'); }
+}
+document.getElementById('btnNewQuestion').onclick = () => openCreate();
+document.getElementById('btnNewBank').onclick = createBank;
+document.getElementById('modal').addEventListener('click', (event) => {
+  if (event.target.id === 'modal') closeModal();
+});
+loadBanks();
+</script>
+</body>
+</html>

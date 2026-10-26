@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>问卷管理 - 问卷系统</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+  .topbar{background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10}
+  .logo{font-size:18px;font-weight:700;color:#4f46e5}
+  .user-info{display:flex;align-items:center;gap:12px;color:#666;font-size:14px}
+  .btn-logout{padding:8px 16px;background:#fff;border:1px solid #ddd;border-radius:6px;color:#333;cursor:pointer;font-size:14px}
+  .btn-logout:hover{background:#f9fafb}
+  .container{display:flex;max-width:1200px;margin:24px auto;padding:0 24px;width:100%}
+  .sidebar{width:260px;flex-shrink:0}
+  .main{flex:1;margin-left:32px}
+  .page-title{font-size:22px;font-weight:700;margin-bottom:8px;color:#1a1a2e}
+  .page-sub{color:#666;margin-bottom:24px;font-size:14px}
+  .btn-create{background:#4f46e5;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn-create:hover{background:#4338ca}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+  th{background:#f9fafb;text-align:left;padding:14px 16px;font-size:13px;color:#666;font-weight:600;text-transform:uppercase;border-bottom:1px solid #eee}
+  td{padding:14px 16px;font-size:14px;border-bottom:1px solid #f1f1f1}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#fbfbff}
+  .badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .badge-draft{background:#fff4e6;color:#b27a00}
+  .badge-published{background:#e7f4ea;color:#1e7e34}
+  .badge-closed{background:#fdecea;color:#b3261e}
+  .actions{display:flex;gap:8px}
+  .btn-action{border:none;background:none;padding:6px;cursor:pointer;font-size:14px;border-radius:4px}
+  .btn-action:hover{background:#f1f1f1}
+  .btn-edit{color:#4f46e5}
+  .btn-delete{color:#b3261e}
+  .empty{text-align:center;padding:48px;color:#999}
+  .empty-btn{margin-top:16px;background:#4f46e5;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:600}
+  .status-filter{margin-bottom:20px;display:flex;gap:8px}
+  .chip{padding:6px 14px;border:1px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;color:#666}
+  .chip.active{border-color:#4f46e5;color:#4f46e5;background:#f0f1ff}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">问卷系统</div>
+  <div class="user-info">
+    <span id="userName">用户</span>
+    <button class="btn-logout" id="btnLogout">退出登录</button>
+  </div>
+</div>
+<div class="container">
+  <div class="sidebar">
+    <div class="status-filter">
+      <div class="chip active" data-status="">全部</div>
+      <div class="chip" data-status="draft">草稿</div>
+      <div class="chip" data-status="published">已发布</div>
+    </div>
+    <button class="btn-create" onclick="location.href='create.html'">+ 创建问卷</button>
+    <a class="btn-create" href="question_bank.html" style="margin-top:10px;background:#fff;color:#4f46e5;border:1px solid #c7c9ff;text-decoration:none">题目库管理</a>
+  </div>
+  <div class="main">
+    <div class="page-title">我的问卷</div>
+    <div class="page-sub">管理您创建的问卷，查看填写情况</div>
+    <div id="msg" style="margin-bottom:16px;padding:10px;border-radius:6px;font-size:13px;display:none"></div>
+    <table id="surveyTable">
+      <thead>
+        <tr><th>标题</th><th>状态</th><th>回答数</th><th>创建时间</th><th>操作</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="empty" class="empty" style="display:none">
+      <p>暂无问卷</p>
+      <button class="empty-btn" onclick="location.href='create.html'">创建第一个问卷</button>
+    </div>
+  </div>
+</div>
+<script>
+const API = (() => {
+  const saved = (window.API_BASE || localStorage.getItem('survey_api_base') || '').trim();
+  if (saved) return saved.replace(/\/+$/, '') + '/api';
+  if (location.protocol.startsWith('http') && location.port === '5000') return location.origin + '/api';
+  const host = location.hostname || 'localhost';
+  return `http://${host}:5000/api`;
+})();
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = 'login.html'; }
+document.getElementById('userName').textContent = JSON.parse(localStorage.getItem('user')||'{}').username || '用户';
+document.getElementById('btnLogout').onclick = () => { localStorage.clear(); window.location.href = 'login.html'; };
+
+let currentFilter = '';
+const chips = document.querySelectorAll('.chip');
+chips.forEach(c => c.addEventListener('click', () => {
+  chips.forEach(x => x.classList.remove('active'));
+  c.classList.add('active');
+  currentFilter = c.getAttribute('data-status') || '';
+  loadSurveys();
+}));
+window.addEventListener('pageshow', () => loadSurveys());
+
+async function loadSurveys() {
+  const msg = document.getElementById('msg');
+  msg.style.display = 'none';
+  try {
+    const url = `${API}/surveys?status=${encodeURIComponent(currentFilter)}&page=1&per_page=50`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (res.status === 401) { localStorage.clear(); window.location.href = 'login.html'; return; }
+    if (!res.ok) { showMsg(data.message || '加载失败', 'error'); return; }
+    renderTable(data.data.items);
+  } catch (e) {
+    showMsg('网络错误', 'error');
+  }
+}
+function renderTable(items) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('empty');
+  tbody.innerHTML = '';
+  if (!items || items.length === 0) { tbody.style.display = 'none'; empty.style.display = 'block'; return; }
+  tbody.style.display = ''; empty.style.display = 'none';
+  const statusMap = { draft: 'badge-draft', published: 'badge-published', closed: 'badge-closed' };
+  const statusText = { draft: '草稿', published: '已发布', closed: '已关闭' };
+  items.forEach(s => {
+    const tr = document.createElement('tr');
+    const sid = s._id || s.id;
+    const expired = s.status === 'published' && s.is_expired === true;
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(s.title)}</strong><br><small style="color:#999">${escapeHtml(s.description || '无描述')}</small></td>
+      <td><span class="badge ${expired ? 'badge-closed' : (statusMap[s.status] || '')}">${expired ? '已截止' : (statusText[s.status] || s.status)}</span></td>
+      <td>${s.response_count || 0}</td>
+      <td>${new Date(s.created_at).toLocaleDateString('zh-CN')}</td>
+  <td class="actions">
+    <button class="btn-action btn-edit" onclick="location.href='edit.html?id=${sid}'">编辑</button>
+    <button class="btn-action btn-edit" style="color:#4f46e5" onclick="duplicateSurvey('${sid}')">复制为新版本</button>
+    <button class="btn-action btn-delete" onclick="deleteSurvey('${sid}')">删除</button>
+    ${s.status === 'draft' ? `<button class="btn-action btn-edit" style="color:#1e7e34" onclick="publishSurvey('${sid}')">发布</button>` : s.status === 'published' ? `<button class="btn-action btn-edit" style="color:#b27a00" onclick="unpublishSurvey('${sid}')">撤回</button>` : ''}
+    <button class="btn-action btn-edit" style="color:#4f46e5" data-title="${escapeHtml(s.title)}" onclick="copyFillLink('${s.link_code || ''}', '${sid}', this.dataset.title)">填写链接</button>
+    <button class="btn-action btn-edit" style="color:#1e7e34" onclick="location.href='stats.html?id=${sid}'">统计</button>
+  </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function showMsg(text, type) {
+  const msg = document.getElementById('msg');
+  msg.textContent = text; msg.className = type === 'error' ? '' : 'success';
+  msg.style.background = type === 'error' ? '#fdecea' : '#e7f4ea';
+  msg.style.color = type === 'error' ? '#b3261e' : '#1e7e34';
+  msg.style.border = type === 'error' ? '1px solid #f5c6c6' : '1px solid #c3e6cb';
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 3000);
+}
+async function deleteSurvey(id) {
+  if (!confirm('确定要删除这个问卷吗？')) return;
+  try {
+    const res = await fetch(`${API}/surveys/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { loadSurveys(); } else { const d = await res.json(); showMsg(d.message || '删除失败', 'error'); }
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+async function publishSurvey(id) {
+  try {
+    const res = await fetch(`${API}/surveys/${id}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { loadSurveys(); } else { const d = await res.json(); showMsg(d.message || '发布失败', 'error'); }
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+async function duplicateSurvey(id) {
+  try {
+    const res = await fetch(`${API}/surveys/${id}/duplicate`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showMsg('已复制为新的草稿，可继续编辑题目');
+      loadSurveys();
+      if (d.data && d.data.id) setTimeout(() => { location.href = `edit.html?id=${d.data.id}`; }, 500);
+    } else { showMsg(d.message || '复制失败', 'error'); }
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+async function unpublishSurvey(id) {
+  if (!confirm('确定要撤回此问卷吗？撤回后将变为草稿状态，可继续编辑。')) return;
+  try {
+    const res = await fetch(`${API}/surveys/${id}/unpublish`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) { loadSurveys(); } else { const d = await res.json(); showMsg(d.message || '撤回失败', 'error'); }
+  } catch (e) { showMsg('网络错误', 'error'); }
+}
+function escapeHtml(str) { return String(str||'').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+function copyFillLink(linkCode, surveyId, title) {
+  const base = API.replace(/\/api$/, '');
+  const link = linkCode
+    ? `${base}/survey/${encodeURIComponent(linkCode)}`
+    : `${base}/survey.html?id=${encodeURIComponent(surveyId)}`;
+  navigator.clipboard.writeText(link).then(() => {
+    showMsg(`《${title}》填写链接已复制：${link}`, 'success');
+  }).catch(() => {
+    showMsg(`填写链接：${link}`, 'info');
+  });
+}
+loadSurveys();
+window.addEventListener('pageshow', () => loadSurveys());
+</script>
+</body>
+</html>
